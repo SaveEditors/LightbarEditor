@@ -1,0 +1,9 @@
+* text=auto
+*.go text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.woff2 binary

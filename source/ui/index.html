@@ -1,0 +1,1805 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only; Copyright (C) 2026 SaveEditors -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lightbar Editor</title>
+<style>
+/* Lightbar Editor. The UI stays graphite and quiet; the only colour on screen is the
+   light itself (strips, particles, ramp). Type: Barlow (body) and Barlow Semi
+   Condensed (headings, controls) - signage faces that suit a hardware tool. */
+@font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(/fonts/barlow-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:500;font-display:swap;src:url(/fonts/barlow-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:600;font-display:swap;src:url(/fonts/barlow-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Semi Condensed";font-weight:500;font-display:swap;src:url(/fonts/barlow-semi-condensed-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Semi Condensed";font-weight:600;font-display:swap;src:url(/fonts/barlow-semi-condensed-latin-600-normal.woff2) format("woff2")}
+:root{
+  --ink:#17181a; --panel:#1e1f22; --raised:#28292d; --rule:#34363b; --rule2:#45474d;
+  --paper:#ece8df; --mute:#9b978e; --faint:#6e6b65;
+  --amber:#e3a23a; --sage:#8fb996; --rust:#e0614f;
+  --body:"Barlow",system-ui,"Segoe UI",sans-serif;
+  --cond:"Barlow Semi Condensed","Barlow",system-ui,sans-serif;
+  /* legacy names used in inline styles */
+  --text:var(--paper); --muted:var(--mute); --line:var(--rule); --accent:var(--paper); --good:var(--sage); --warn:var(--amber); --bad:var(--rust);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--paper);font:15px/1.45 var(--body);display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--paper);outline-offset:2px}
+button{font-family:var(--cond);font-weight:500;font-size:14.5px;letter-spacing:.01em;background:transparent;border:1px solid var(--rule2);border-radius:6px;padding:6px 13px;cursor:pointer;white-space:nowrap;line-height:1.25}
+button:hover{background:var(--raised);border-color:#5a5c63}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.38;cursor:default;transform:none;background:transparent}
+button.primary{background:var(--paper);border-color:var(--paper);color:var(--ink);font-weight:600}
+button.primary:hover{background:#fffaf0;border-color:#fffaf0}
+button.danger{color:#f0a296;border-color:#5a3a35}
+button.danger:hover{background:#2c1f1d}
+button.small{padding:3px 10px;font-size:13.5px}
+button.ghost{border-color:transparent;color:var(--mute)}
+button.ghost:hover{color:var(--paper);background:var(--raised)}
+button.icon{padding:5px 8px;display:inline-flex;align-items:center;justify-content:center}
+button.icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+input[type=text],input[type=number],select{background:var(--raised);border:1px solid var(--rule);border-radius:5px;padding:5px 8px;min-width:0}
+input[type=text]:focus,input[type=number]:focus,select:focus{border-color:var(--mute);outline:none}
+select{font-family:var(--body);cursor:pointer}
+input[type=number]{width:76px;font-variant-numeric:tabular-nums}
+.xyz input[type=number]{width:64px}
+input[type=color]{width:34px;height:28px;padding:0;border:1px solid var(--rule2);border-radius:5px;background:none;cursor:pointer}
+input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+input[type=color]::-webkit-color-swatch{border:0;border-radius:3px}
+input[type=range]{width:auto;flex:1;min-width:80px;accent-color:var(--paper);height:18px}
+input[type=checkbox],input[type=radio]{accent-color:var(--paper);width:15px;height:15px;margin:0}
+label{color:var(--mute)}
+code{font:13px/1 ui-monospace,Consolas,monospace;color:var(--paper);background:var(--raised);padding:1px 5px;border-radius:3px}
+
+/* header */
+header{display:flex;align-items:stretch;gap:0;padding:0 14px 0 18px;height:54px;flex:none;border-bottom:1px solid var(--rule);background:var(--ink)}
+header h1{font:600 18px/54px var(--cond);margin:0 26px 0 0;letter-spacing:.01em;white-space:nowrap}
+header h1 span{color:var(--faint);font:500 13px var(--cond);margin-left:7px}
+.tabs{display:flex;gap:2px}
+.tabs button{border:0;border-radius:0;background:none;padding:0 14px;color:var(--mute);font-size:15.5px;position:relative;height:54px}
+.tabs button:hover{color:var(--paper);background:none}
+.tabs button.on{color:var(--paper)}
+.tabs button.on::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:var(--paper)}
+.tabs button .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-left:7px;vertical-align:2px;visibility:hidden}
+.tabs button.unsaved .dot{visibility:visible}
+.spacer{flex:1}
+.hgroup{display:flex;align-items:center;gap:6px}
+.hsep{width:1px;background:var(--rule);margin:14px 8px}
+.toolbar .save{min-width:124px}
+.toolbar .save .sdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-right:8px;vertical-align:1px;display:none}
+.toolbar .save.dirty .sdot{display:inline-block}
+.toolbar .save.saved{background:var(--sage);border-color:var(--sage);color:var(--ink)}
+.menu{position:absolute;z-index:40;background:var(--raised);border:1px solid var(--rule2);border-radius:7px;padding:5px;min-width:220px;box-shadow:0 14px 40px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.menu button{border:0;text-align:left;border-radius:4px;padding:7px 10px;font-family:var(--body);font-weight:400;font-size:14px}
+.menu button:hover{background:#34353a}
+.menu .mh{font:500 12.5px var(--cond);color:var(--faint);padding:8px 10px 3px}
+.menu hr{border:0;border-top:1px solid var(--rule);margin:5px 2px}
+.menu .pathrow{display:flex;gap:6px;padding:4px 6px 6px}
+.menu .pathrow input{flex:1;min-width:260px}
+
+/* layout */
+main{flex:1;min-height:0;min-width:0;display:flex;overflow:hidden}
+.view{display:none;flex:1;min-height:0;min-width:0}
+.view.on{display:flex}
+.stage{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;background:#000}
+.side{width:372px;flex:none;border-left:1px solid var(--rule);background:var(--panel);overflow:auto;padding:0;display:flex;flex-direction:column}
+.card{padding:16px 18px 18px;border-bottom:1px solid var(--rule)}
+.card h3,details.card > summary{margin:0 0 12px;font:600 16px/1.2 var(--cond);letter-spacing:.01em;display:flex;align-items:baseline;gap:8px;color:var(--paper)}
+.card h3 .sub,details.card > summary .sub{color:var(--faint);font:400 13px var(--body)}
+details.card > summary{cursor:pointer;list-style:none;margin:0;user-select:none}
+details.card > summary::-webkit-details-marker{display:none}
+details.card > summary::after{content:"";width:7px;height:7px;border-right:1.5px solid var(--mute);border-bottom:1.5px solid var(--mute);transform:rotate(-45deg);margin-left:auto;align-self:center;transition:transform .15s}
+details.card[open] > summary::after{transform:rotate(45deg) translate(-2px,-2px)}
+details.card[open] > summary{margin-bottom:12px}
+details.card > summary b{font:inherit}
+.row{display:flex;align-items:center;gap:9px;margin:8px 0;flex-wrap:wrap}
+.row > label:first-child{width:90px;flex:none;font-size:14px}
+.muted{color:var(--mute)}
+.small-t{font-size:13px}
+.swatches{display:flex;gap:5px;flex-wrap:wrap}
+.swatches button{width:21px;height:21px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.18)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+canvas{display:block}
+.empty{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--mute);text-align:center;padding:30px;background:var(--ink)}
+.empty b{color:var(--paper);font:600 24px var(--cond);letter-spacing:.01em}
+.empty > div{max-width:52ch}
+.empty .glyph{width:120px;height:120px;margin-bottom:6px;opacity:.9}
+.overlay-tools{position:absolute;top:12px;left:12px;display:flex;gap:0;flex-wrap:wrap;background:rgba(30,31,34,.82);border:1px solid var(--rule);border-radius:7px;padding:3px;backdrop-filter:blur(6px)}
+.overlay-tools button{border:0;background:none;color:var(--mute);border-radius:4px;padding:3px 10px}
+.overlay-tools button:hover{color:var(--paper);background:var(--raised)}
+.overlay-tools button.on{background:var(--paper);color:var(--ink)}
+.overlay-tools .vsep{width:1px;background:var(--rule);margin:3px 4px}
+.overlay-info{position:absolute;top:18px;right:16px;color:var(--faint);font-size:13px;pointer-events:none}
+.filebar{padding:9px 18px;border-bottom:1px solid var(--rule);display:flex;gap:12px;align-items:center;flex-wrap:nowrap;white-space:nowrap;background:var(--ink);font-size:14px}
+.filebar .name{font-weight:500}
+.filebar .path{color:var(--faint);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:30vw;min-width:0;flex:0 1 auto;direction:rtl;text-align:left}
+.filebar .spacer{min-width:8px}
+.filebar button{font-size:13.5px;padding:2px 9px}
+.badge{font:500 13px var(--cond);color:var(--sage);display:inline-flex;align-items:center;gap:5px}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.mod{color:var(--amber)}
+.badge.ok{color:var(--sage)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);top:66px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:50;max-width:min(560px,92vw);pointer-events:none}
+.t{background:var(--paper);color:var(--ink);border-radius:7px;padding:9px 15px;box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:14.5px;pointer-events:auto;cursor:pointer;animation:tin .18s ease-out}
+.t b{font-weight:600}
+.t.err{background:#3a1f1b;color:#ffd9d2;border:1px solid #6b3730}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+/* effect dock */
+.dock{border-top:1px solid var(--rule);background:var(--panel);padding:12px 18px 14px;display:flex;flex-direction:column;gap:10px}
+.transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.transport .time{font:500 15px var(--cond);font-variant-numeric:tabular-nums;min-width:104px;color:var(--paper)}
+.transport label{font-size:14px}
+#playBtn{min-width:86px}
+#tl{width:100%;height:78px;border-radius:5px;cursor:crosshair;touch-action:none}
+.keyed{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-height:32px;font-size:14px}
+.presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
+.pre{display:flex;flex-direction:column;gap:6px;align-items:stretch;text-align:left;padding:0;border:0;background:none;border-radius:4px}
+.pre:hover{background:none}
+.pre canvas{width:100%;height:auto;aspect-ratio:150/74;border-radius:4px;background:#000;outline:1px solid var(--rule);outline-offset:0}
+.pre:hover canvas{outline-color:var(--mute)}
+.pre span{font:500 13.5px/1.2 var(--cond);color:var(--mute);white-space:normal}
+.pre:hover span{color:var(--paper)}
+.pre.on canvas{outline:2px solid var(--paper)}
+.pre.on span{color:var(--paper)}
+.pre .sw{outline:1px solid var(--rule)}
+.pre.on .sw{outline:2px solid var(--paper);outline-offset:1px}
+@media (max-width:1250px){.filebar .path{display:none}#tlWhat{display:none}}
+.mypre{display:flex;gap:6px;align-items:center;margin-top:6px}
+.mypre button:first-child{flex:1;text-align:left}
+.strip-card{padding:14px 0 0}
+.strip-card h4{display:none}
+.sidetabs{display:flex;position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--rule);padding:0 10px}
+.sidetabs button{flex:1;border:0;border-radius:0;background:none;color:var(--mute);font-size:15.5px;height:46px;position:relative}
+.sidetabs button:hover{color:var(--paper);background:none}
+.sidetabs button.on{color:var(--paper)}
+.sidetabs button.on::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:2px;background:var(--paper)}
+.pane{padding:16px 18px 22px}
+.hint{color:var(--faint);font-size:13.5px;margin:0 0 12px}
+.subhead{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px;font:600 15px var(--cond);color:var(--paper)}
+details.fold{margin-top:18px;border-top:1px solid var(--rule);padding-top:12px}
+details.fold > summary{cursor:pointer;list-style:none;font:500 14.5px var(--cond);color:var(--mute);display:flex;align-items:center;gap:8px}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold > summary::before{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+details.fold[open] > summary::before{transform:rotate(45deg)}
+details.fold > summary:hover{color:var(--paper)}
+#stripPick{margin-top:10px}
+/* ramp */
+.ramp-wrap{flex:1;overflow:auto;padding:24px 26px;display:flex;flex-direction:column;gap:18px;background:var(--ink)}
+.ramp-wrap b{font:600 16px var(--cond)}
+.ramp-wrap .card{border:1px solid var(--rule);border-radius:6px;background:var(--panel)}
+.ramp-canvas{width:100%;image-rendering:pixelated;border-radius:4px;background:#000}
+.legend{display:flex;justify-content:space-between;color:var(--faint);font-size:13px;margin-top:5px}
+.seg{display:flex;background:var(--ink);border:1px solid var(--rule);border-radius:6px;padding:2px;gap:2px}
+.seg button{border:0;background:none;padding:4px 10px;border-radius:4px;color:var(--mute);flex:1;font-size:14px}
+.seg button:hover{color:var(--paper);background:var(--raised)}
+.seg button.on{background:var(--paper);color:var(--ink)}
+.stops{display:flex;flex-direction:column;gap:6px}
+.stop{display:flex;align-items:center;gap:6px}
+.kbd{font:500 12.5px var(--cond);border:1px solid var(--rule2);border-bottom-width:2px;border-radius:4px;padding:1px 6px;color:var(--paper);background:var(--raised)}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:60}
+#help .box{background:var(--panel);border:1px solid var(--rule2);border-radius:9px;padding:22px 26px;min-width:360px;max-width:92vw}
+#help h3{font:600 20px var(--cond);margin:0 0 14px}
+#help table{border-collapse:collapse} #help td{padding:6px 18px 6px 0;vertical-align:top} #help td:first-child{white-space:nowrap}
+.recent{display:flex;flex-direction:column;gap:2px;margin-top:10px;align-items:stretch;min-width:min(520px,80vw)}
+.recent .rh{font:500 14px var(--cond);color:var(--faint);text-align:left;padding:0 10px 4px}
+.recent button{border:0;text-align:left;overflow:hidden;text-overflow:ellipsis;font-family:var(--body);font-weight:400;color:var(--mute)}
+.recent button:hover{color:var(--paper)}
+.recent button.primary{color:var(--ink);text-align:center;margin-bottom:8px;font-family:var(--cond);font-weight:600}
+.openrow{display:flex;gap:8px;margin-top:6px}
+.openrow input{width:min(380px,60vw)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:1100px){.side{width:320px}}
+@media(max-width:1250px){header h1{margin-right:12px}.tabs button{padding:0 8px;font-size:14px}#helpBtn{display:none}}
+@media(max-width:1000px){header{height:auto;flex-wrap:wrap}header h1{line-height:54px}header .hgroup{min-height:54px}.tabs{order:2;flex-basis:100%;height:44px}.tabs button{height:44px;flex:1}}
+</style>
+<style>
+#v-ftp{overflow:auto;display:none;padding:28px;box-sizing:border-box}#v-ftp.on{display:block}.ftp-page{max-width:880px;margin:auto}.ftp-grid{display:grid;grid-template-columns:1fr 130px;gap:16px}.ftp-grid label{display:flex;flex-direction:column;gap:7px}.ftp-grid input{width:100%;box-sizing:border-box}.ftp-wide{grid-column:1/-1}.ftp-page .card{margin:20px 0;padding:20px}.ftp-page p{line-height:1.55}.ftp-page code{overflow-wrap:anywhere}#ftpStatus{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}#ftpReview{border:1px solid #bb9558}#ftpFiles{padding-left:20px}dialog{background:#202225;color:#ece8df;border:1px solid #555;border-radius:9px;max-width:510px;padding:28px}dialog::backdrop{background:#000a}dialog p{line-height:1.6}dialog a{color:#e9bc75}
+.ftp-grid{grid-template-columns:1fr 1fr}.ftp-grid input{background:var(--raised);border:1px solid var(--rule);border-radius:5px;padding:8px;color:var(--paper);font:inherit;min-width:0}.ftp-grid input:focus{outline:1px solid var(--mute)}.ftp-page .card{background:#1d1f21;border:1px solid var(--rule);border-radius:7px}
+@media(max-width:650px){#v-ftp{padding:14px}.ftp-grid{grid-template-columns:1fr}.ftp-wide{grid-column:auto}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Lightbar Editor<span id="ver"></span></h1>
+  <nav class="tabs" id="tabs">
+    <button data-tab="fx" class="on">Shutdown light<span class="dot"></span></button>
+    <button data-tab="gnf">Ramp texture<span class="dot"></span></button>
+    <button data-tab="ftp">Console FTP</button>
+  </nav>
+  <div class="spacer"></div>
+  <div class="hgroup" style="position:relative">
+    <button id="openBtn" title="Open files (Ctrl+O)">Open…</button>
+    <button class="icon" id="openMore" title="Recent files and open by path (Ctrl+L)" aria-label="Recent files and open by path"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="menu" id="openMenu" hidden style="top:46px;right:0">
+      <div class="mh">Open a file by its path</div>
+      <div class="pathrow"><input type="text" id="pathIn" placeholder="Paste a path, then press Enter"><button class="small" id="pathGo">Open</button></div>
+      <hr><div class="mh">Recent</div><div id="recentMenu"></div>
+    </div>
+  </div>
+  <div class="hsep"></div>
+  <div class="hgroup toolbar">
+    <button class="icon ghost" id="topUndo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
+    <button class="icon ghost" id="topRedo" title="Redo (Ctrl+Y)" aria-label="Redo" disabled><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg></button>
+    <button class="primary save" id="topSave" title="Save (Ctrl+S)" disabled><span class="sdot"></span><span id="topSaveLbl">Save</span></button>
+  </div>
+  <div class="hsep"></div>
+  <div class="hgroup">
+    <button class="ghost" id="helpBtn" title="Keyboard shortcuts (?)">Shortcuts</button>
+    <button class="ghost" id="aboutBtn">About</button>
+    <button class="ghost" id="quitBtn" title="Close the editor program">Quit</button>
+  </div>
+</header>
+<main>
+  <!-- ============ SHUTDOWN EFFECT ============ -->
+  <section class="view on" id="v-fx">
+    <div class="stage">
+      <div class="filebar" id="fb-fx" hidden></div>
+      <div class="menu" id="fxMenu" hidden style="top:46px;right:12px">
+        <button id="saveAsFx">Save copies as…</button>
+        <button id="resetFx" title="Go back to how the files were when you opened them">Reset to as opened</button>
+        <hr><button id="restoreFx">Restore .bak backups…</button>
+      </div>
+      <div class="empty" id="e-fx">
+        <svg class="glyph" viewBox="0 0 120 120" aria-hidden="true"><defs><filter id="gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter></defs>
+          <g stroke="#ece8df" stroke-linecap="round"><path d="M50 108 L36 14" stroke-width="5" opacity=".25" filter="url(#gl)"/><path d="M70 108 L84 14" stroke-width="5" opacity=".25" filter="url(#gl)"/><path d="M50 108 L36 14" stroke-width="1.6"/><path d="M70 108 L84 14" stroke-width="1.6"/></g></svg>
+        <b>Open the shutdown light</b>
+        <div>Pick <code>shutdown_lightbar.fbxd</code> or <code>shutdown_ramp.gnf</code>. The other one opens too if it's in the same folder.</div>
+        <div class="openrow"><button class="primary" id="emptyOpen">Open files…</button></div>
+        <div class="recent" id="recentBox" hidden></div>
+      </div>
+      <div id="cv-wrap" style="flex:1;position:relative;min-height:0" hidden>
+        <canvas id="cv3d" style="width:100%;height:100%"></canvas>
+        <div class="empty" id="noMesh" style="position:absolute;inset:0" hidden><b>No strip shape</b><div>Open <code>shutdown_lightbar.fbxd</code> to see the animation on the strips.</div></div>
+        <div class="overlay-tools" role="toolbar" aria-label="View">
+          <button class="on" data-view="screen" title="Only the part the console's picture shows">Console screen</button><button data-view="front" title="Whole strip from the front (F)">Front</button><button data-view="34">3/4</button><button data-view="side" title="(S)">Side</button><button data-view="top" title="(T)">Top</button><button data-view="back">Back</button>
+          <span class="vsep"></span>
+          <button class="on" id="unlitBtn" title="Show the dark parts of the strips as grey lines">Unlit parts</button><button id="bgBtn" title="Preview on a light background">Light background</button>
+        </div>
+        <div class="overlay-info">Drag to rotate, scroll to zoom</div>
+      </div>
+      <div class="dock" id="dock" hidden>
+        <div class="transport">
+          <button id="playBtn"></button>
+          <button class="icon" id="rewBtn" title="Back to the start (Home)" aria-label="Back to the start"><svg viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M19 6l-9 6 9 6z"/></svg></button>
+          <span class="time" id="timeLbl">0.00 / 3.00 s</span>
+          <label for="durIn" title="Preview duration only; this does not set the console shutdown duration">Preview length</label><input type="number" id="durIn" min="0.3" max="30" step="0.1" value="3" style="width:64px"><span class="muted">s</span>
+          <label style="display:flex;gap:7px;align-items:center;color:var(--text)"><input type="checkbox" id="loopIn" checked> Loop</label>
+          <span class="spacer"></span>
+          <label id="rowsLbl" hidden></label>
+          <div class="seg" id="fxHalf" hidden><button data-half="0" class="on">Strip brightness</button><button data-half="1">Particle colours</button></div>
+          <span class="muted small-t" id="tlWhat">Timeline: strip brightness</span>
+        </div>
+        <div id="noRampNote" class="muted small-t" hidden>Previewing without the ramp texture. Open <code>shutdown_ramp.gnf</code> to edit ramp pixels. Its effect on console timing is unverified. Strip colours save to the .fbxd either way.</div>
+        <canvas id="tl"></canvas>
+        <div class="keyed" id="keyEd"></div>
+        <details class="fold" id="previewNotes"><summary>Preview timing and file recovery</summary>
+          <div class="row"><label for="modelSel">Preview model</label><select id="modelSel" title="How the preview uses the ramp">
+              <option value="bright">Brightness model (unverified)</option>
+              <option value="time">Ramp as colour over time</option>
+              <option value="strip">Ramp as colour along the strip</option>
+              <option value="static">Strip colours only</option>
+            </select></div>
+          <p class="muted small-t">Strip colours and particle palettes are editable. Ramp-driven flashing and motion are experimental: console ramp sampling is not yet verified. Preview length changes playback here only.</p>
+          <p class="muted small-t"><b>As opened</b> uses the files you loaded. <b>Reset to as opened</b> clears this session’s effect edits. <b>Restore .bak backups</b> replaces files on disk with existing backups, which may already be customised. To use a reference pair, open your own saved <code>.fbxd</code> and <code>.gnf</code> copies together.</p>
+        </details>
+      </div>
+    </div>
+    <aside class="side" id="side-fx" hidden>
+      <div class="sidetabs" role="tablist" aria-label="Edit">
+        <button role="tab" data-pane="effects" class="on">Effects</button><button role="tab" data-pane="strips">Strips</button><button role="tab" data-pane="particles">Particles</button>
+      </div>
+      <div class="pane" data-pane="effects">
+        <p class="hint">Hover to preview, click to use.</p>
+        <div class="presets" id="presetGrid"></div>
+        <div class="subhead"><span>My effects</span><div class="btnrow"><button class="small ghost" id="presetFolder" title="Find your saved effects">Folder</button><button class="small" id="savePreset">Save current…</button></div></div>
+        <div id="myPresets" class="muted small-t">None yet.</div>
+      </div>
+      <div class="pane" data-pane="strips" hidden>
+        <div class="row" style="margin-top:0"><label style="display:flex;gap:8px;align-items:center;color:var(--text);width:auto"><input type="checkbox" id="linkStrips" checked> Same settings for both strips</label></div>
+        <div class="seg" id="stripPick" hidden><button data-strip="1" class="on">Left strip</button><button data-strip="0">Right strip</button></div>
+        <div id="stripCards"></div>
+        <div class="row" style="margin-top:14px" title="The console only shows the upper part of the strips. Colours, rainbows and light patterns are fitted to that part so all of them are visible."><label>Fit to</label><select id="framingSel" style="flex:1"><option value="console">Part the console shows</option><option value="whole">Whole strip</option></select></div>
+        <details class="fold" id="posCard">
+          <summary>Position and size</summary>
+          <div class="row xyz"><label>Offset X Y Z</label><input type="number" step="0.5" id="ox" value="0" aria-label="Offset X"><input type="number" step="0.5" id="oy" value="0" aria-label="Offset Y"><input type="number" step="0.5" id="oz" value="0" aria-label="Offset Z"></div>
+          <div class="row xyz"><label>Scale X Y Z</label><input type="number" step="0.05" id="sx" value="1" aria-label="Scale X"><input type="number" step="0.05" id="sy" value="1" aria-label="Scale Y"><input type="number" step="0.05" id="sz" value="1" aria-label="Scale Z"></div>
+        </details>
+      </div>
+      <div class="pane" data-pane="particles" hidden>
+        <div id="partNoRamp" class="hint" hidden>Open <code>shutdown_ramp.gnf</code> to change the particle colours. They're stored in its bottom rows.</div>
+        <div id="partBody">
+          <p class="hint">The floating sparkles that gather on the strips.</p>
+          <div class="row"><label style="display:flex;gap:8px;align-items:center;width:auto"><input type="checkbox" id="partFollowTheme" checked> Use theme particle colors</label></div>
+          <p class="hint" id="partFollowHint">Each effect selects a matching palette. Editing particles keeps your custom colors across theme changes.</p>
+          <canvas id="partBar" style="width:100%;height:10px;border-radius:3px;margin-bottom:14px"></canvas>
+          <div class="presets" id="partPresets"></div>
+          <div class="subhead"><span>Your colours</span><button class="small" id="partAdd" title="Add a colour">Add colour</button></div>
+          <div id="partCols" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+          <div class="row" style="margin-top:12px"><label>Mix</label><select id="partMix" style="flex:1"><option value="step">Each particle picks one colour</option><option value="smooth">Blend between the colours</option></select></div>
+          <div class="row"><label>Brightness</label><input type="range" id="partBri" min="0" max="140" step="5" value="100"><span id="partBriV" class="muted small-t" style="width:42px;text-align:right">100%</span></div>
+          <div class="row"><label style="display:flex;gap:8px;align-items:center;color:var(--text);width:auto"><input type="checkbox" id="partShow" checked> Show the particles in the preview</label></div>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ============ RAMP PIXELS ============ -->
+  <section class="view" id="v-gnf">
+    <div class="stage">
+      <div class="filebar" id="fb-gnf" hidden></div>
+      <div class="empty" id="e-gnf"><b>No ramp texture open</b><div>Open <code>shutdown_ramp.gnf</code>. Its top rows are used by the experimental strip preview; its bottom rows hold particle colours. Console timing is unverified.</div><div class="openrow"><button class="primary" onclick="$('#openBtn').click()">Open files…</button></div></div>
+      <div class="ramp-wrap" id="ramp-wrap" hidden>
+        <div>
+          <div class="row" style="justify-content:space-between;margin:0 0 8px"><b>With your changes</b><span class="muted small-t" id="rampDims"></span></div>
+          <canvas class="ramp-canvas" id="rampCv"></canvas>
+          <div class="legend"><span>Texture left edge</span><span>Right edge</span></div>
+        </div>
+        <div>
+          <div class="row" style="margin:0 0 8px"><b>As opened</b></div>
+          <canvas class="ramp-canvas" id="rampOrigCv"></canvas>
+        </div>
+        <div class="card"><h3>Brightness <span class="sub">solid lines: strip rows, dashed: particle rows</span></h3><canvas id="rampPlot" style="width:100%;height:150px"></canvas></div>
+        <p class="muted small-t" style="margin:0;max-width:80ch">This page changes the texture's pixels directly, on top of what the Shutdown light timeline made. For most edits the Shutdown light page is all you need.</p>
+      </div>
+    </div>
+    <aside class="side" id="side-gnf" hidden>
+      <div class="card">
+        <h3>Adjust</h3>
+        <div class="seg" id="halfSeg"><button data-half="0" class="on">Strip rows</button><button data-half="1">Particle rows</button></div>
+        <div class="row"><label>Hue shift</label><input type="range" id="gHue" min="-180" max="180" value="0"><span id="gHueV" class="muted small-t">0°</span></div>
+        <div class="row"><label>Saturation</label><input type="range" id="gSat" min="0" max="300" value="100"><span id="gSatV" class="muted small-t">100%</span></div>
+        <div class="row"><label>Brightness</label><input type="range" id="gBri" min="0" max="300" value="100"><span id="gBriV" class="muted small-t">100%</span></div>
+      </div>
+      <div class="card">
+        <h3><label style="color:var(--text);display:flex;gap:7px;align-items:center"><input type="checkbox" id="gRecolor"> Recolour with a gradient</label></h3>
+        <div class="stops" id="stops"></div>
+        <div class="btnrow" style="margin-top:6px"><button class="small" id="addStop">Add colour</button></div>
+        <div class="row"><label>Keep fade</label><input type="checkbox" id="gKeep" checked><span class="muted small-t">Keep the original brightness curve</span></div>
+        <div class="row"><label>Strength</label><input type="range" id="gStr" min="0" max="100" value="100"><span id="gStrV" class="muted small-t">100%</span></div>
+        <div class="swatches" id="rampSw"></div>
+      </div>
+      <div class="card">
+        <h3>Image</h3>
+        <div class="btnrow"><button id="impPng">Import PNG…</button><button id="expPng">Export PNG…</button></div>
+        <input type="file" id="pngFile" accept="image/*" hidden>
+        <p class="muted small-t" style="margin:8px 0 0">Imported images are resized to the texture size.</p>
+      </div>
+      <div class="card">
+        <h3>File</h3>
+        <div class="btnrow"><button class="primary" id="saveGnf">Save texture</button><button id="saveAsGnf">Save as…</button><button id="resetGnf">Reset these rows</button></div>
+        <div class="btnrow" style="margin-top:8px"><button class="danger" id="restoreGnf">Restore .bak backup…</button></div>
+        <p class="muted small-t" style="margin:10px 0 0" id="gnfQ">Saving compresses the image to BC7 again. The file header stays exactly as it was.</p>
+      </div>
+    </aside>
+  </section>
+
+<section class="view" id="v-ftp"><div class="ftp-page">
+  <h2>Console FTP</h2>
+  <p>Download your shutdown assets, edit them locally, then review and upload the saved pair.</p>
+  <div class="card"><h3>Connection</h3><div class="ftp-grid">
+    <label>PS5 address<input type="text" id="ftpHost" placeholder="IP address or hostname" autocomplete="off" spellcheck="false"></label>
+    <label>Port<input id="ftpPort" type="number" min="1" max="65535" value="1337"></label>
+    <label class="ftp-wide">Remote asset folder<input type="text" id="ftpDirectory" value="/system_ex/vsh_asset" spellcheck="false"></label>
+    <label>Username<input type="text" id="ftpUser" value="anonymous" autocomplete="off" spellcheck="false"></label>
+    <label>Password<input id="ftpPassword" type="password" autocomplete="off"></label>
+  </div><p class="muted">Start your console's FTP server first. Connection details stay in this session. FTP is unencrypted; use a trusted local network.</p>
+  <div class="btnrow"><button id="ftpCheck">Check connection</button><button id="ftpDownload">Download pair</button></div></div>
+  <div class="card"><h3>Upload saved files</h3><p id="ftpLocal">Open both assets and save your changes before preparing an upload.</p>
+  <p class="muted">Only <code>shutdown_lightbar.fbxd</code> and <code>shutdown_ramp.gnf</code> are transferred. Review creates a verified local backup before any console write.</p>
+  <button id="ftpPrepare" disabled>Review upload…</button></div>
+  <div class="card" id="ftpReview" hidden><h3>Ready for review</h3><p id="ftpTarget"></p><ul id="ftpFiles"></ul><p id="ftpBackup"></p>
+    <div class="btnrow"><button id="ftpBackupOpen">Show backup folder</button><button class="primary" id="ftpUpload">Upload this pair</button><button id="ftpCancel">Cancel review</button></div>
+    <p class="muted">Review expires after 10 minutes. If a transfer fails, the editor attempts to restore and verify the files it touched.</p>
+  </div>
+  <div class="card"><h3>Transfer status</h3><div id="ftpStatus" role="status" aria-live="polite">No connection attempted.</div></div>
+  <p class="muted">Verification checks the selected FTP folder. If your setup uses an overlay or cached assets, update the active asset view and restart as required by that setup. A successful transfer does not confirm how the effect renders on the console.</p>
+</div></section>
+</main>
+<dialog id="about"><h2>Lightbar Editor <small id="aboutVersion"></small></h2>
+  <p>A focused desktop editor for PS5 shutdown lightbar meshes and ramp textures.</p>
+  <p>Maintained by <strong>SaveEditors</strong><br>Licensed under GNU GPL version 3.0 only (GPL-3.0-only).</p>
+  <p>Edit strip colors, particle palettes and ramp textures; preview changes and transfer your saved assets over FTP. Desktop previews are approximate, and console animation timing remains under investigation.</p>
+  <p><a href="https://github.com/SaveEditors/LightbarEditor" target="_blank" rel="noopener noreferrer">Project, documentation and source code</a></p>
+  <p class="muted">Independent project. Not affiliated with Sony Interactive Entertainment. Includes open-source components credited in THIRD_PARTY_LICENSES.txt.</p>
+  <form method="dialog"><button class="primary">Close</button></form>
+</dialog>
+<div id="toast"></div>
+<div id="help" hidden><div class="box" role="dialog" aria-label="Keyboard shortcuts">
+  <h3>Keyboard shortcuts</h3>
+  <table>
+    <tr><td><span class="kbd">Ctrl</span> <span class="kbd">S</span></td><td>Save what this page changed</td></tr>
+    <tr><td><span class="kbd">Ctrl</span> <span class="kbd">O</span></td><td>Open files</td></tr>
+    <tr><td><span class="kbd">Ctrl</span> <span class="kbd">L</span></td><td>Open by path, recent files</td></tr>
+    <tr><td><span class="kbd">Ctrl</span> <span class="kbd">Z</span> <span class="kbd">Y</span></td><td>Undo, redo (shutdown light)</td></tr>
+    <tr><td><span class="kbd">Space</span></td><td>Play or pause the animation</td></tr>
+    <tr><td><span class="kbd">←</span> <span class="kbd">→</span></td><td>Step 0.1 s, with Shift 1 s</td></tr>
+    <tr><td><span class="kbd">Home</span></td><td>Back to the start</td></tr>
+    <tr><td><span class="kbd">Delete</span></td><td>Delete the selected keyframe</td></tr>
+    <tr><td><span class="kbd">F</span> <span class="kbd">S</span> <span class="kbd">T</span></td><td>Front, side, top view</td></tr>
+    <tr><td><span class="kbd">1</span> <span class="kbd">2</span></td><td>Switch page</td></tr>
+    <tr><td><span class="kbd">?</span></td><td>Show this list</td></tr>
+  </table>
+  <div class="btnrow" style="margin-top:18px;justify-content:flex-end"><button class="primary" id="helpClose">Close</button></div>
+</div></div>
+
+<script>
+const CFG = /*__SERVER_CONFIG__*/null;
+let editorStopped = false;
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+if (!CFG) {
+  document.body.innerHTML = '<div class="empty" style="height:100vh"><b>Start LightbarEditor.exe</b>This page is served by the editor program. Double-click <code>LightbarEditor.exe</code>; it opens this page for you.</div>';
+  throw new Error('no server');
+}
+$('#ver').textContent = 'v' + CFG.version;
+
+// ---------- helpers ----------
+async function api(path, body = {}) {
+  let r;
+  try {
+    r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json','X-Token':CFG.token}, body:JSON.stringify(body)});
+  } catch (e) { throw new Error('The editor program is not running (did you close its window?)'); }
+  const j = await r.json().catch(() => ({error:'bad response from editor'}));
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+function toast(msg, kind='', ms) {
+  if (editorStopped) return;
+  const box = $('#toast'), d = document.createElement('div'); d.className = 't ' + kind; d.innerHTML = msg;
+  d.onclick = () => d.remove(); d.title = 'Click to dismiss';
+  box.appendChild(d); while (box.children.length > 2) box.firstChild.remove();
+  setTimeout(() => d.remove(), ms || (kind === 'err' ? 9000 : 3800));
+}
+const ICON_MORE = '<svg viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+// several files opened at once -> one message
+let openedNames = [], openedT = 0;
+function noteOpened(name) {
+  openedNames.push(name); clearTimeout(openedT);
+  openedT = setTimeout(() => {
+    const n = openedNames; openedNames = [];
+    toast(n.length === 1 ? `Opened <b>${esc(n[0])}</b>` : n.length <= 3 ? `Opened <b>${n.map(esc).join('</b>, <b>')}</b>` : `Opened ${n.length} files`, 'ok', 2600);
+  }, 350);
+}
+const b64ToBytes = b => { const s = atob(b); const u = new Uint8Array(s.length); for (let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
+function bytesToB64(u8) { let s=''; for (let i=0;i<u8.length;i+=0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i+0x8000)); return btoa(s); }
+const hex2rgb = h => { h=h.replace('#',''); return [parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255]; };
+const rgb2hex = c => '#' + c.map(v => Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join('');
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const baseName = p => p.split(/[\\/]/).pop();
+async function askSavePath(suggested, dir) {
+  try { const r = await api('/api/save-dialog', {suggested, dir}); return r.path || null; }
+  catch (e) { const p = prompt('Save to (full path):', (dir ? dir + (dir.includes('\\') ? '\\' : '/') : '') + suggested); return p || null; }
+}
+const SWATCHES = ['#ffffff','#ff2d2d','#ff8a00','#ffd400','#3cff6a','#00e5ff','#2b6bff','#8a3dff','#ff3dc8'];
+function rgb2hsl(r,g,b){const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h=0,s=0;const l=(mx+mn)/2;if(mx!==mn){const d=mx-mn;s=l>0.5?d/(2-mx-mn):d/(mx+mn);h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h/=6;}return[h,s,l];}
+function hsl2rgb(h,s,l){if(s===0)return[l,l,l];const f=(p,q,t)=>{t=(t%1+1)%1;return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p;};const q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;return[f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)];}
+
+// ---------- tabs ----------
+let curTab = 'fx';
+function showTab(t) {
+  curTab = t; setTimeout(updateTopBar);
+  $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  $$('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + t));
+  if (t === 'fx') { draw3d(); drawTimeline(); }
+  if (t === 'gnf') drawRamp();
+}
+$$('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function markTab(tab) {}
+
+// ---------- opening ----------
+async function loadPath(path, opts = {}) {
+  path = path.trim().replace(/^"|"$/g, '');
+  if (!path) return;
+  try {
+    const r = await api('/api/load', {path});
+    if (r.kind === 'fbxd' && M && fbxdDirty() && M.info.path !== r.path && !confirm(`Discard unsaved changes to ${M.info.name}?`)) return;
+    if (r.kind === 'gnf' && R && rampDirty() && R.info.path !== r.path && !confirm(`Discard unsaved changes to ${R.info.name}?`)) return;
+    if (r.kind === 'fbxd') { loadFbxd(r); markTab('fx'); }
+    else if (r.kind === 'gnf') { loadGnf(r); markTab('fx'); markTab('gnf'); }
+    if (!opts.quiet) showTab('fx');
+    noteOpened(r.name);
+    rememberOpen(r.path);
+    if (!opts.noSibling && (r.kind === 'fbxd' || r.kind === 'gnf')) await openSibling(r);
+    updateTopBar();
+  } catch (e) { toast(esc(e.message), 'err'); }
+}
+async function openSibling(r) {
+  // opening the strip also opens the ramp next to it, and vice versa
+  const want = r.kind === 'fbxd' ? (R ? null : '.gnf') : (M ? null : '.fbxd');
+  if (!want) return;
+  try {
+    const s = await api('/api/siblings', {path:r.path});
+    let c = s.files.filter(f => f.toLowerCase().endsWith(want));
+    if (want === '.gnf') c.sort((a,b) => (/ramp/i.test(baseName(b)) - /ramp/i.test(baseName(a))) || (/shutdown/i.test(baseName(b)) - /shutdown/i.test(baseName(a))));
+    else c.sort((a,b) => (/shutdown|lightbar/i.test(baseName(b)) - /shutdown|lightbar/i.test(baseName(a))));
+    if (c.length && (c.length === 1 || /ramp|lightbar/i.test(baseName(c[0])))) {
+      await loadPath(c[0], {quiet:true, noSibling:true});
+    }
+  } catch (e) {}
+}
+$('#openBtn').onclick = async () => {
+  try {
+    const r = await api('/api/open-dialog');
+    for (const p of (r.paths || [])) await loadPath(p);
+  } catch (e) { toast(esc(e.message) + '<br>Paste the file\'s path instead.', 'err'); openMenu(true); }
+};
+const parentName = p => { const parts = p.split(/[\\/]/).filter(Boolean); return parts.length > 1 ? parts[parts.length-2] : ''; };
+function renderRecentMenu() {
+  const box = $('#recentMenu'), rec = (SETTINGS.recent || []).slice(0, 10);
+  box.innerHTML = rec.length ? '' : '<div class="mh" style="padding-top:2px">Nothing yet</div>';
+  rec.forEach(p => { const b = document.createElement('button'); b.innerHTML = esc(baseName(p)) + `<span style="color:var(--faint);margin-left:10px">${esc(parentName(p))}</span>`; b.title = p; b.onclick = () => { openMenu(false); loadPath(p); }; box.appendChild(b); });
+}
+function openMenu(show) {
+  const m = $('#openMenu'); m.hidden = !(show ?? m.hidden);
+  if (!m.hidden) { renderRecentMenu(); setTimeout(() => $('#pathIn').focus(), 0); }
+}
+$('#openMore').onclick = e => { e.stopPropagation(); openMenu(); };
+document.addEventListener('click', e => { if (editorStopped) return; if (!e.target.closest('#openMenu,#openMore')) $('#openMenu').hidden = true; if (!e.target.closest('#fxMore')) $('#fxMenu').hidden = true; });
+$('#emptyOpen').onclick = () => $('#openBtn').click();
+$('#pathGo').onclick = () => { openMenu(false); loadPath($('#pathIn').value); };
+$('#pathIn').onkeydown = e => { if (e.key === 'Enter') { openMenu(false); loadPath($('#pathIn').value); } else if (e.key === 'Escape') openMenu(false); };
+$('#quitBtn').onclick = async () => {
+  if (dirtyAny() && !confirm('You have unsaved changes. Quit anyway?')) return;
+  try { await api('/api/quit'); } catch (e) {}
+  editorStopped = true; anim.playing = false; clearTimeout(settingsTimer);
+  document.body.innerHTML = '<div class="empty" style="height:100vh"><b>Editor stopped</b>You can close this tab.</div>';
+};
+window.addEventListener('beforeunload', e => { if (!editorStopped && dirtyAny()) { e.preventDefault(); e.returnValue = ''; } });
+function dirtyAny() { return fbxdDirty() || rampDirty(); }
+
+// =====================================================================
+// SHUTDOWN EFFECT  (strip mesh M + ramp texture R)
+// =====================================================================
+let M = null, S = null;           // mesh + strip edit state
+let R = null;                     // ramp texture state
+let followThemeParticles = true, currentThemeParticles = null;
+let hist = [], histI = -1;
+const cam = {yaw: 0, pitch: 0, zoom: 1, unlit: true, lightBg: false, screen: true};
+// What the console's screen shows of the strips (measured from a photo of the console
+// running "Rainbow stripes"): the front face from about the middle (y ~ 15) up to where
+// the strip bends back over the top. The lower half is below the edge of the picture.
+const CONSOLE_Y0 = 15, CONSOLE_FRONT_Z = 90;
+let framing = 'console';   // 'console': colours/patterns span the visible part; 'whole': the whole strip
+const anim = {playing:false, t:0.35, dur:3, loop:true, model:'bright', half:0, last:0};
+// Experimental brightness interpretation; console sampling/timing remains unverified.
+const toBright = f => { const l = 0.2126*f[0] + 0.7152*f[1] + 0.0722*f[2]; return [l, l, l]; };
+const modelF = f => anim.model === 'bright' ? toBright(f) : f;
+let selKey = -1;
+
+function showFxPanels() {
+  const any = !!(M || R);
+  $('#e-fx').hidden = any; $('#cv-wrap').hidden = !any; $('#side-fx').hidden = !any;
+  $('#dock').hidden = !(R || M); $('#noMesh').hidden = !!M;
+  $('#tl').hidden = !R; $('#keyEd').hidden = !R; $('#noRampNote').hidden = !!R; $('#tlWhat').hidden = !R;
+  syncSideTabs(); syncParticleUI();
+  updateFxBar(); draw3d(); drawTimeline(); renderKeyEditor();
+  if (M && R && !autoPlayed) { autoPlayed = true; anim.t = 0; if (!anim.playing) togglePlay(); }
+}
+let autoPlayed = false;
+
+// ---------- mesh ----------
+function loadFbxd(r) {
+  currentThemeParticles = null;
+  const n = r.vc;
+  M = {info:r, n, pos:Float64Array.from(r.pos), uv:Float64Array.from(r.uv), col:Float64Array.from(r.col), strands:r.strands};
+  M.baseI = new Float64Array(n);
+  for (let i=0;i<n;i++) M.baseI[i] = Math.max(M.col[i*4], M.col[i*4+1], M.col[i*4+2]);
+  M.lines = M.strands.map(s => { let l = s.filter(i => M.uv[i*2] === 0); if (l.length < 2) l = s; return l; });
+  M.vr = M.strands.map(s => { let a=Infinity,b=-Infinity; for (const i of s){a=Math.min(a,M.uv[i*2+1]);b=Math.max(b,M.uv[i*2+1]);} return [a, b-a || 1]; });
+  // part of each strip visible on the console screen (v range)
+  M.vis = M.strands.map((s, si) => {
+    let a = Infinity, b = -Infinity;
+    for (const i of s) { const y = M.pos[i*3+1], z = M.pos[i*3+2], v = M.uv[i*2+1];
+      if (y >= CONSOLE_Y0 && z >= CONSOLE_FRONT_Z) { a = Math.min(a, v); b = Math.max(b, v); } }
+    return isFinite(a) && b > a ? [a, b-a] : M.vr[si];
+  });
+  let mn=[Infinity,Infinity,Infinity], mx=[-Infinity,-Infinity,-Infinity];
+  for (let i=0;i<n;i++) for (let c=0;c<3;c++){ mn[c]=Math.min(mn[c],M.pos[i*3+c]); mx[c]=Math.max(mx[c],M.pos[i*3+c]); }
+  M.center = mn.map((v,c) => (v+mx[c])/2); M.radius = Math.hypot(mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2]) / 2 || 1;
+  S = defaultStripState(); M.saved = JSON.stringify(S);
+  resetHistory(); buildStripCards(); syncStripUI(); showFxPanels();
+}
+function defaultStrip(i) {
+  let best = -1, bi = 0;
+  for (const v of M.strands[i]) if (M.baseI[v] > best) { best = M.baseI[v]; bi = v; }
+  let c = [1,1,1];
+  if (best > 0) c = [M.col[bi*4]/best, M.col[bi*4+1]/best, M.col[bi*4+2]/best];
+  const hx = rgb2hex(c);
+  return {a:hx, b:hx, gradient:false, rainbow:false, rbCycles:1, fade:'original', stripes:8, brightness:1, touched:false};
+}
+function defaultStripState() { return {strips: M.strands.map((_,i) => defaultStrip(i)), off:[0,0,0], scl:[1,1,1]}; }
+const fbxdDirty = () => !!(M && JSON.stringify(S) !== M.saved);
+
+// ---------- history (strips + ramp timeline together) ----------
+const snap = () => JSON.stringify({S, fx: R ? R.fx : null, adj: R ? R.adj : null, followThemeParticles, currentThemeParticles, partState});
+function resetHistory() { hist = [snap()]; histI = 0; updateFxBar(); }
+function commit() { const s = snap(); if (hist[histI] === s) { updateFxBar(); return; } hist = hist.slice(0, histI+1); hist.push(s); histI = hist.length-1; updateFxBar(); }
+function restoreSnap(s) { const o = JSON.parse(s); if (M && o.S) S = o.S; if (R && o.fx) { R.fx = o.fx; if (o.adj) R.adj = o.adj; refreshRamp(); } setThemeParticleMode(o.followThemeParticles !== false); currentThemeParticles = o.currentThemeParticles || null; partState = o.partState || null; selKey = -1; syncStripUI(); syncParticleUI(); renderKeyEditor(); draw3d(); drawTimeline(); updateFxBar(); updateGnfBar(); }
+function undo() { if (histI > 0) restoreSnap(hist[--histI]); }
+function redo() { if (histI < hist.length-1) restoreSnap(hist[++histI]); }
+
+document.addEventListener('keydown', e => {
+  if ($('#about').open || curTab === 'ftp') return;
+  if (editorStopped) return;
+  const typing = e.target.matches('input,textarea,select');
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (mod && k === 's') { e.preventDefault(); topSave(); return; }
+  if (mod && k === 'o') { e.preventDefault(); $('#openBtn').click(); return; }
+  if (mod && k === 'l') { e.preventDefault(); openMenu(true); return; }
+  if (e.key === 'Escape' && !$('#help').hidden) { $('#help').hidden = true; return; }
+  if (typing) return;
+  if (e.key === '?') { $('#help').hidden = !$('#help').hidden; return; }
+  if (!mod && ['1','2'].includes(e.key) && !e.target.matches('select')) { showTab(['fx','gnf'][+e.key-1]); return; }
+  if (curTab !== 'fx') return;
+  if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+  else if (mod && k === 'y') { e.preventDefault(); redo(); }
+  else if (e.key === ' ' && !e.target.matches('button,select') && (R || M)) { e.preventDefault(); togglePlay(); }
+  else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.target.matches('select,input')) {
+    e.preventDefault(); if (anim.playing) togglePlay();
+    const step = (e.shiftKey ? 1 : 0.1) / anim.dur * (e.key === 'ArrowLeft' ? -1 : 1);
+    anim.t = clamp(anim.t + step, 0, 1); draw3d(); drawTimeline();
+  }
+  else if (e.key === 'Home') { e.preventDefault(); anim.t = 0; draw3d(); drawTimeline(); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && selKey >= 0 && !e.target.matches('input')) { e.preventDefault(); deleteKey(); }
+  else if (!mod && (k === 'f' || k === 's' || k === 't')) { const v = {f:'front', s:'side', t:'top'}[k]; const b = $(`[data-view="${v}"]`); if (b) b.click(); }
+});
+$('#helpBtn').onclick = () => { $('#help').hidden = false; };
+$('#helpClose').onclick = () => { $('#help').hidden = true; };
+$('#help').onclick = e => { if (e.target.id === 'help') $('#help').hidden = true; };
+// ---------- top toolbar ----------
+function updateTopBar() {
+  if (editorStopped) return;
+  syncFTPControls();
+  const b = $('#topSave'), lbl = $('#topSaveLbl');
+  let dirty = false, text = 'Save';
+  if (curTab === 'fx') { dirty = fbxdDirty() || rampDirty(); text = 'Save effect'; }
+  else if (curTab === 'gnf') { dirty = rampDirty(); text = 'Save texture'; }
+  if (!b.classList.contains('saved')) lbl.textContent = text;
+  b.disabled = !dirty && !b.classList.contains('saved'); b.classList.toggle('dirty', dirty);
+  $('#topUndo').disabled = curTab !== 'fx' || histI <= 0;
+  $('#topRedo').disabled = curTab !== 'fx' || histI >= hist.length-1;
+  const anyDirty = dirtyAny();
+  $('#tabs [data-tab=fx]').classList.toggle('unsaved', fbxdDirty() || rampDirty());
+  $('#tabs [data-tab=gnf]').classList.toggle('unsaved', rampDirty());
+  const names = [M && M.info.name, R && R.info.name].filter(Boolean).join(' + ');
+  document.title = (anyDirty ? '• ' : '') + (names ? names + ' – ' : '') + 'Lightbar Editor';
+}
+function flashSaved() {
+  const b = $('#topSave'); b.classList.add('saved'); $('#topSaveLbl').textContent = 'Saved';
+  clearTimeout(flashSaved.t); flashSaved.t = setTimeout(() => { b.classList.remove('saved'); updateTopBar(); }, 1600);
+}
+async function topSave() {
+  if (curTab === 'fx') { if (fbxdDirty() || rampDirty()) await saveEffect(); else toast('Nothing to save', '', 1500); }
+  else if (curTab === 'gnf') { if (R && rampDirty()) $('#saveGnf').click(); else toast('Nothing to save', '', 1500); }
+  updateTopBar();
+}
+$('#topSave').onclick = topSave; $('#topUndo').onclick = undo; $('#topRedo').onclick = redo;
+// ---------- settings, recent files, show in folder ----------
+let SETTINGS = {recent: [], session: [], prefs: {}};
+async function loadSettings() { try { SETTINGS = Object.assign(SETTINGS, (await api('/api/settings/get')).settings || {}); for (const key of ['session','recent']) SETTINGS[key] = (SETTINGS[key] || []).filter(p => /\.(fbxd|gnf)$/i.test(p)); } catch (e) {} }
+let settingsTimer = null;
+function saveSettings() { clearTimeout(settingsTimer); settingsTimer = setTimeout(() => api('/api/settings/set', {settings: SETTINGS}).catch(() => {}), 400); }
+function rememberOpen(path) {
+  SETTINGS.recent = [path, ...SETTINGS.recent.filter(p => p !== path)].slice(0, 12);
+  SETTINGS.session = [M && M.info.path, R && R.info.path].filter(Boolean);
+  saveSettings();
+}
+function showRecent() {
+  const box = $('#recentBox'), ses = (SETTINGS.session || []), rec = (SETTINGS.recent || []).slice(0, 8);
+  if (!ses.length && !rec.length) { box.hidden = true; return; }
+  box.hidden = false; box.innerHTML = '';
+  if (ses.length) {
+    const b = document.createElement('button'); b.className = 'primary';
+    b.textContent = `Reopen last session (${ses.length} file${ses.length > 1 ? 's' : ''})`; b.title = ses.join('\n');
+    b.onclick = async () => { for (const p of ses) await loadPath(p, {quiet: true, noSibling: true}); showTab('fx'); };
+    box.appendChild(b);
+  }
+  if (rec.length) {
+    box.insertAdjacentHTML('beforeend', '<div class="rh">Recent</div>');
+    rec.forEach(p => { const b = document.createElement('button'); b.className = 'small'; b.innerHTML = esc(baseName(p)) + `<span style="color:var(--faint);margin-left:10px">${esc(parentName(p))}</span>`; b.title = p; b.onclick = () => loadPath(p); box.appendChild(b); });
+  }
+}
+async function reveal(path) { try { await api('/api/reveal', {path}); } catch (e) { toast(esc(e.message), 'err'); } }
+function updateFxBar() {
+  const el = $('#fb-fx');
+  if (!M && !R) { el.hidden = true; return; }
+  el.hidden = false;
+  const part = (x, dirty) => `<span class="name" title="${x.info.hasBackup ? 'A backup is stored next to this file as .bak; it may contain custom edits' : ''}">${esc(x.info.name)}</span><span class="badge ${dirty ? 'mod' : 'ok'}">${dirty ? 'Unsaved' : 'Saved'}</span>`;
+  el.innerHTML = (M ? part(M, fbxdDirty()) : '<span class="muted">Strip file not open</span>') + '<span style="width:10px"></span>' +
+                 (R ? part(R, rampDirty()) : '<span class="muted">Ramp texture not open</span>') +
+                 `<span class="spacer"></span><span class="path" title="${esc((M||R).info.dir)}">${esc((M||R).info.dir)}</span><button class="small ghost" id="revealFx" title="Open this folder in Explorer">Show in folder</button><button class="icon ghost" id="fxMore" title="Save copies, reset session edits, restore .bak backups" aria-label="More file actions">${ICON_MORE}</button>`;
+  $('#revealFx').onclick = () => reveal((M||R).info.path);
+  $('#fxMore').onclick = e => { e.stopPropagation(); $('#fxMenu').hidden = !$('#fxMenu').hidden; };
+  $('#restoreFx').disabled = !((M && M.info.hasBackup) || (R && R.info.hasBackup));
+  updateTopBar();
+}
+
+// ---------- strip patterns ----------
+const PATTERNS = [
+  ['original', 'Original fade'], ['solid', 'Fully lit'], ['center', 'Glow in the middle'],
+  ['ends', 'Glow at both ends'], ['startbright', 'Bright at the bottom'], ['endbright', 'Bright at the top'],
+  ['stripes', 'Segments'], ['comet', 'Comet'], ['dots', 'Dots']
+];
+const sq = x => x*x;
+function profile(st, i, t, si) {
+  switch (st.fade) {
+    case 'solid': return 1;
+    case 'center': return Math.exp(-sq((t-0.5)/0.24));
+    case 'ends': return Math.max(Math.exp(-sq(t/0.15)), Math.exp(-sq((1-t)/0.15)));
+    case 'startbright': return Math.pow(1-t, 1.5);
+    case 'endbright': return Math.pow(t, 1.5);
+    case 'stripes': return Math.pow(0.5 + 0.5*Math.cos(2*Math.PI*t*(st.stripes||8)), 4);
+    case 'dots': return Math.pow(0.5 + 0.5*Math.cos(2*Math.PI*t*(st.stripes||8)*3), 24);
+    case 'comet': return t < 0.82 ? Math.pow(t/0.82, 4) : Math.exp(-sq((t-0.82)/0.035));
+    default: return M.baseI[i];
+  }
+}
+// strip colours that get SAVED to the .fbxd (no ramp applied)
+function stripColors(strips) {
+  const out = Float64Array.from(M.col);
+  (strips || S.strips).forEach((st, si) => {
+    if (!st.touched) return;
+    const A = hex2rgb(st.a), B = hex2rgb(st.b), [v0, rng] = framing === 'console' ? M.vis[si] : M.vr[si];
+    for (const i of M.strands[si]) {
+      const t = clamp((M.uv[i*2+1] - v0) / rng, 0, 1);
+      const k = profile(st, i, t, si) * st.brightness;
+      const C = st.rainbow ? hsl2rgb((t * (st.rbCycles || 1)) % 1, 1, 0.5) : null;
+      for (let c=0;c<3;c++) out[i*4+c] = (C ? C[c] : st.gradient ? A[c] + (B[c]-A[c])*t : A[c]) * k;
+    }
+  });
+  return out;
+}
+function computePositions() {
+  if (S.off.every(v => v === 0) && S.scl.every(v => v === 1)) return M.pos;
+  const out = new Float64Array(M.pos.length);
+  for (let i=0;i<M.n;i++) for (let c=0;c<3;c++) out[i*3+c] = M.pos[i*3+c]*S.scl[c] + S.off[c];
+  return out;
+}
+function displayRGB(r,g,b) {
+  const m = Math.max(r,g,b);
+  if (m <= 1) return [r,g,b];
+  const over = Math.min(1, (m-1)/2);
+  return [r/m + (1-r/m)*over, g/m + (1-g/m)*over, b/m + (1-b/m)*over];
+}
+
+function buildStripCards() {
+  const wrap = $('#stripCards'); wrap.innerHTML = '';
+  // label the Left / Right buttons with the strip that is on that side
+  const side = M.strands.map(s => { let ax = 0; for (const v of s) ax += M.pos[v*3]; return ax / s.length; });
+  const left = side.indexOf(Math.min(...side)), right = side.indexOf(Math.max(...side));
+  const bs = $$('#stripPick button'); bs[0].dataset.strip = left; bs[1].dataset.strip = right;
+  if (stripSel >= side.length) stripSel = left;
+  M.strands.forEach((s, i) => {
+    let ax = 0; for (const v of s) ax += M.pos[v*3]; ax /= s.length;
+    const d = document.createElement('div'); d.className = 'strip-card';
+    d.innerHTML = `<h4>${ax >= 0 ? 'Right strip' : 'Left strip'} <span class="sub">strip ${String.fromCharCode(65+i)}</span></h4>
+      <canvas class="bar" style="width:100%;height:12px;border-radius:3px"></canvas>
+      <div class="row"><label>Colour</label><input type="color" class="ca" aria-label="Colour"><label style="display:flex;gap:7px;align-items:center;color:var(--text);width:auto"><input type="checkbox" class="grad"> Fade to</label><input type="color" class="cb" aria-label="Second colour"></div>
+      <div class="row"><label></label><div class="swatches"></div></div>
+      <div class="row"><label>Rainbow</label><label style="display:flex;gap:7px;align-items:center;color:var(--text);width:auto"><input type="checkbox" class="rb"> Rainbow along the strip</label></div>
+      <div class="row rb-row"><label>Colour cycles</label><input type="range" class="rbc" min="0.25" max="4" step="0.25"><span class="rbv muted small-t" style="width:30px"></span></div>
+      <div class="row"><label>Light pattern</label><select class="fade" style="flex:1">${PATTERNS.map(p => `<option value="${p[0]}">${p[1]}</option>`).join('')}</select></div>
+      <div class="row stripes-row"><label>Segments</label><input type="range" class="stn" min="2" max="40" step="1"><span class="stv muted small-t" style="width:26px"></span></div>
+      <div class="row"><label>Brightness</label><input type="range" class="bri" min="0" max="400" step="5"><span class="briv muted small-t" style="width:42px;text-align:right"></span></div>
+      <div class="row"><label></label><button class="small ghost rst">Reset to the file's look</button></div>`;
+    wrap.appendChild(d);
+    const sw = d.querySelector('.swatches');
+    SWATCHES.forEach(p => { const b = document.createElement('button'); b.style.background = p; b.title = p; b.onclick = () => { edit(i, s => { s.a = p; if (!s.gradient) s.b = p; }); commit(); }; sw.appendChild(b); });
+    d.querySelector('.ca').oninput = e => edit(i, s => { s.a = e.target.value; });
+    d.querySelector('.cb').oninput = e => edit(i, s => { s.b = e.target.value; s.gradient = true; });
+    d.querySelector('.grad').onchange = e => { edit(i, s => { s.gradient = e.target.checked; }); commit(); };
+    d.querySelector('.rb').onchange = e => { edit(i, s => { s.rainbow = e.target.checked; }); commit(); };
+    d.querySelector('.rbc').oninput = e => edit(i, s => { s.rbCycles = +e.target.value; });
+    d.querySelector('.rbc').addEventListener('change', commit);
+    d.querySelector('.fade').onchange = e => { edit(i, s => { s.fade = e.target.value; }); commit(); };
+    d.querySelector('.bri').oninput = e => edit(i, s => { s.brightness = e.target.value / 100; });
+    d.querySelector('.stn').oninput = e => edit(i, s => { s.stripes = +e.target.value; });
+    ['.ca','.cb','.bri','.stn'].forEach(q => d.querySelector(q).addEventListener('change', commit));
+    d.querySelector('.rst').onclick = () => { if ($('#linkStrips').checked) S.strips = S.strips.map((_,j) => defaultStrip(j)); else S.strips[i] = defaultStrip(i); syncStripUI(); draw3d(); commit(); };
+  });
+}
+function edit(i, fn) {
+  const targets = $('#linkStrips').checked ? S.strips.map((_,j)=>j) : [i];
+  for (const j of targets) { fn(S.strips[j]); S.strips[j].touched = true; }
+  syncStripUI(); draw3d(); updateFxBar();
+}
+function syncStripUI() {
+  if (!M) return;
+  const linked = $('#linkStrips').checked;
+  $('#stripPick').hidden = linked || S.strips.length < 2;
+  // the seg buttons are labelled by side: find which strip index is on which side
+  $$('#stripPick button').forEach(b => { const i = +b.dataset.strip; b.classList.toggle('on', i === stripSel); });
+  $$('#stripCards > .strip-card').forEach((d, i) => { d.hidden = linked ? i !== 0 : i !== stripSel; });
+  $$('#stripCards > .strip-card').forEach((d, i) => {
+    const s = S.strips[i];
+    d.querySelector('.ca').value = s.a; d.querySelector('.cb').value = s.b;
+    d.querySelector('.grad').checked = s.gradient; d.querySelector('.cb').disabled = !s.gradient || s.rainbow;
+    d.querySelector('.ca').disabled = !!s.rainbow; d.querySelector('.grad').disabled = !!s.rainbow;
+    d.querySelector('.rb').checked = !!s.rainbow; d.querySelector('.rb-row').hidden = !s.rainbow;
+    d.querySelector('.rbc').value = s.rbCycles || 1; d.querySelector('.rbv').textContent = '×' + (s.rbCycles || 1);
+    d.querySelector('.fade').value = s.fade;
+    d.querySelector('.stripes-row').hidden = !(s.fade === 'stripes' || s.fade === 'dots');
+    d.querySelector('.stn').value = s.stripes || 8; d.querySelector('.stv').textContent = s.stripes || 8;
+    d.querySelector('.bri').value = Math.round(s.brightness*100); d.querySelector('.briv').textContent = Math.round(s.brightness*100) + '%';
+    drawBar(d.querySelector('.bar'), i);
+  });
+  ['ox','oy','oz'].forEach((k,c) => { if (document.activeElement !== $('#'+k)) $('#'+k).value = S.off[c]; });
+  ['sx','sy','sz'].forEach((k,c) => { if (document.activeElement !== $('#'+k)) $('#'+k).value = S.scl[c]; });
+}
+['ox','oy','oz','sx','sy','sz'].forEach(k => {
+  const el = $('#'+k);
+  el.oninput = () => { const v = parseFloat(el.value); if (!isFinite(v)) return; if (k[0]==='o') S.off['xyz'.indexOf(k[1])] = v; else S.scl['xyz'.indexOf(k[1])] = v; draw3d(); updateFxBar(); };
+  el.onchange = commit;
+});
+function drawBar(cv, si) {
+  const w = cv.clientWidth || 300, h = 16; cv.width = w; cv.height = h;
+  const g = cv.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0,0,w,h);
+  const col = stripColors(), line = M.lines[si];
+  for (let x=0;x<w;x++) {
+    const i = line[Math.min(line.length-1, Math.floor(x / w * line.length))];
+    const [r,gg,b] = displayRGB(col[i*4], col[i*4+1], col[i*4+2]);
+    g.fillStyle = `rgb(${r*255|0},${gg*255|0},${b*255|0})`; g.fillRect(x,0,1,h);
+  }
+}
+
+// ---------- ramp texture ----------
+function defaultAdj() { return {hue:0, sat:100, bri:100, recolor:false, stops:[{p:0,c:'#ff2d2d'},{p:1,c:'#ff8a00'}], keep:true, str:100}; }
+function loadGnf(r) {
+  partState = null;
+  followThemeParticles = SETTINGS.prefs.themeParticles !== false;
+  R = {info:r, w:r.width, h:r.height, orig:b64ToBytes(r.rgba), adj:[defaultAdj(), defaultAdj()], fx:[null,null], importGen:0};
+  R.src = R.orig;
+  R.saved = rampStateKey();
+  refreshRamp();
+  $('#e-gnf').hidden = true; $('#ramp-wrap').hidden = false; $('#side-gnf').hidden = false;
+  $('#rampDims').textContent = `${R.w} × ${R.h} pixels, BC7`;
+  resetHistory(); syncRampUI(); drawRamp(); updateGnfBar(); showFxPanels();
+}
+const rampStateKey = () => JSON.stringify([R.adj, R.fx, R.importGen]);
+const rampDirty = () => !!(R && rampStateKey() !== R.saved);
+function updateGnfBar() {
+  if (!R) return;
+  const el = $('#fb-gnf'); el.hidden = false;
+  el.innerHTML = `<span class="name">${esc(R.info.name)}</span><span class="badge ${rampDirty() ? 'mod' : 'ok'}">${rampDirty() ? 'Unsaved' : 'Saved'}</span><span class="spacer"></span><span class="path" title="${esc(R.info.dir || R.info.path)}">${esc(R.info.dir || R.info.path)}</span><button class="small ghost" id="revealGnf">Show in folder</button>`;
+  $('#revealGnf').onclick = () => reveal(R.info.path); updateTopBar();
+  $('#restoreGnf').disabled = !R.info.hasBackup;
+}
+const halfRows = part => [part*R.h/2, part ? R.h : R.h/2];
+// keyframes -> colour (0..1) at time t
+function keyColorAt(fx, t) {
+  const k = fx.keys;
+  if (!k.length) return [0,0,0];
+  const ck = key => hex2rgb(key.c).map(v => v * key.b);
+  if (t <= k[0].t) return ck(k[0]);
+  if (t >= k[k.length-1].t) return ck(k[k.length-1]);
+  for (let j=0;j<k.length-1;j++) if (t >= k[j].t && t <= k[j+1].t) {
+    if (fx.interp === 'step') return ck(k[j]);
+    let u = (t - k[j].t) / ((k[j+1].t - k[j].t) || 1);
+    if (fx.interp === 'ease') u = u*u*(3-2*u);
+    const A = ck(k[j]), B = ck(k[j+1]);
+    return A.map((v,c) => v + (B[c]-v)*u);
+  }
+  return ck(k[0]);
+}
+function sortKeys(fx) { fx.keys.sort((a,b) => a.t - b.t); }
+function rampBase() {
+  const out = new Uint8ClampedArray(R.src);
+  for (let part=0; part<2; part++) {
+    const fx = R.fx[part]; if (!fx) continue;
+    const ks = {interp:fx.interp, keys:[...fx.keys].sort((a,b) => a.t-b.t)};
+    const [y0,y1] = halfRows(part);
+    for (let x=0;x<R.w;x++) {
+      const c = keyColorAt(ks, R.w > 1 ? x/(R.w-1) : 0);
+      for (let y=y0;y<y1;y++) { const i=(y*R.w+x)*4; out[i]=c[0]*255; out[i+1]=c[1]*255; out[i+2]=c[2]*255; out[i+3]=255; }
+    }
+  }
+  return out;
+}
+function stopColor(stops, t) {
+  const s = [...stops].sort((a,b) => a.p-b.p);
+  if (t <= s[0].p) return hex2rgb(s[0].c);
+  if (t >= s[s.length-1].p) return hex2rgb(s[s.length-1].c);
+  for (let k=0;k<s.length-1;k++) if (t >= s[k].p && t <= s[k+1].p) {
+    const u = (t - s[k].p) / ((s[k+1].p - s[k].p) || 1), A = hex2rgb(s[k].c), B = hex2rgb(s[k+1].c);
+    return A.map((v,c) => v + (B[c]-v)*u);
+  }
+  return hex2rgb(s[0].c);
+}
+function rampPixels() {
+  const base = rampBase(), {w, h} = R, out = new Uint8ClampedArray(base);
+  for (let part=0; part<2; part++) {
+    const p = R.adj[part];
+    if (p.hue===0 && p.sat===100 && p.bri===100 && !p.recolor) continue;
+    const [y0,y1] = halfRows(part);
+    let lmax = 0;
+    for (let y=y0;y<y1;y++) for (let x=0;x<w;x++) { const i=(y*w+x)*4; lmax = Math.max(lmax, 0.2126*base[i]+0.7152*base[i+1]+0.0722*base[i+2]); }
+    lmax = lmax/255 || 1;
+    for (let y=y0;y<y1;y++) for (let x=0;x<w;x++) {
+      const i=(y*w+x)*4;
+      let r=base[i]/255, g=base[i+1]/255, b=base[i+2]/255;
+      if (p.hue!==0 || p.sat!==100) { let [H_,S_,L_] = rgb2hsl(r,g,b); H_ += p.hue/360; S_ = clamp(S_*p.sat/100,0,1); [r,g,b] = hsl2rgb(H_,S_,L_); }
+      if (p.recolor) {
+        const L = (0.2126*r+0.7152*g+0.0722*b) / lmax;
+        const c = stopColor(p.stops, w>1 ? x/(w-1) : 0);
+        const tgt = p.keep ? c.map(v => v*L) : c, k = p.str/100;
+        r += (tgt[0]-r)*k; g += (tgt[1]-g)*k; b += (tgt[2]-b)*k;
+      }
+      const m = p.bri/100;
+      out[i] = r*m*255; out[i+1] = g*m*255; out[i+2] = b*m*255;
+    }
+  }
+  return out;
+}
+function refreshRamp() { R.px = rampPixels(); }
+// ramp colour (0..1) at position t of a half, read from the final pixels
+function rampAt(part, t) {
+  const x = clamp(Math.round(t*(R.w-1)), 0, R.w-1), y = halfRows(part)[0] + 1, i = (y*R.w + x)*4;
+  return [R.px[i]/255, R.px[i+1]/255, R.px[i+2]/255];
+}
+
+// ---------- 3D preview ----------
+const cv = $('#cv3d');
+let drag = null;
+cv.addEventListener('pointerdown', e => { drag = {x:e.clientX, y:e.clientY, yaw:cam.yaw, pitch:cam.pitch}; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e => { if (!drag) return;
+  // a real drag (not a click) leaves the fixed console-screen framing
+  if (cam.screen) { if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) return; cam.screen = false; $$('[data-view]').forEach(x => x.classList.toggle('on', x.dataset.view === 'front')); }
+  cam.yaw = drag.yaw + (e.clientX-drag.x)*0.008; cam.pitch = clamp(drag.pitch + (e.clientY-drag.y)*0.008, -1.55, 1.55); if (!anim.playing) draw3d(); });
+cv.addEventListener('pointerup', () => drag = null);
+cv.addEventListener('wheel', e => { e.preventDefault(); cam.zoom = clamp(cam.zoom * Math.exp(-e.deltaY*0.0015), 0.3, 8); if (!anim.playing) draw3d(); }, {passive:false});
+$$('[data-view]').forEach(b => b.onclick = () => {
+  const v = {screen:[0,0], front:[0,0], '34':[0.55,0.25], side:[Math.PI/2,0], top:[0,Math.PI/2-0.001], back:[Math.PI,0]}[b.dataset.view];
+  cam.yaw = v[0]; cam.pitch = v[1]; cam.zoom = 1; cam.screen = b.dataset.view === 'screen';
+  $$('[data-view]').forEach(x => x.classList.toggle('on', x === b)); draw3d();
+});
+$('#unlitBtn').onclick = () => { cam.unlit = !cam.unlit; $('#unlitBtn').classList.toggle('on', cam.unlit); draw3d(); };
+$('#bgBtn').onclick = () => { cam.lightBg = !cam.lightBg; $('#bgBtn').classList.toggle('on', cam.lightBg); draw3d(); SETTINGS.prefs.lightBg = cam.lightBg; saveSettings(); };
+window.addEventListener('resize', () => { $$('canvas.wave').forEach(c => drawWave(c, c._peaks)); draw3d(); drawTimeline(); if (R) drawRamp(); if (M) syncStripUI(); });
+
+function previewColors() {
+  if (hoverPreset) {   // live preview of a preset under the mouse (nothing is changed until you click)
+    const p = hoverPreset, col = stripColors(presetStrips(p));
+    const f = modelF(presetFactor(p, anim.t));
+    for (let i=0;i<M.n;i++) for (let c=0;c<3;c++) col[i*4+c] *= f[c];
+    return col;
+  }
+  const col = stripColors();
+  if (!R) {
+    if (!virtFx || anim.model === 'static') return col;
+    const f = modelF(keyColorAt(virtFx, anim.t));
+    for (let i=0;i<M.n;i++) for (let c=0;c<3;c++) col[i*4+c] *= f[c];
+    return col;
+  }
+  if (anim.model === 'static') return col;
+  if (anim.model === 'time' || anim.model === 'bright') {
+    const f = modelF(rampAt(0, anim.t));
+    for (let i=0;i<M.n;i++) for (let c=0;c<3;c++) col[i*4+c] *= f[c];
+  } else {
+    M.strands.forEach((s, si) => { const [v0, rng] = M.vr[si];
+      for (const i of s) { const f = rampAt(0, (M.uv[i*2+1]-v0)/rng); for (let c=0;c<3;c++) col[i*4+c] *= f[c]; } });
+  }
+  return col;
+}
+// The file is Y-up: strips run bottom (y<0) -> top (y>0) on the front face (+Z),
+// then bend back over the top edge. Front view = looking at the console from +Z.
+function draw3d() {
+  if (!M || curTab !== 'fx') return;
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  cv.width = W*dpr; cv.height = H*dpr;
+  const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const light = cam.lightBg;
+  g.fillStyle = light ? '#f2efe8' : '#000'; g.fillRect(0,0,W,H);
+  const pos = computePositions(), col = previewColors();
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  let scale = Math.min(W, H) / (2.2 * M.radius) * cam.zoom;
+  let ctr = M.center, scrY0 = 0, scrY1 = 0;
+  if (cam.screen) {   // frame the part the console shows, like its screen does
+    let y1 = -Infinity; for (let i=0;i<M.n;i++) y1 = Math.max(y1, M.pos[i*3+1]);
+    scrY0 = CONSOLE_Y0; scrY1 = y1;
+    ctr = [M.center[0], (scrY0 + scrY1) / 2, M.center[2]];
+    scale = Math.min(H / ((scrY1 - scrY0) * 1.12), W / (M.radius * 1.4)) * cam.zoom;
+  }
+  const rot = (x,y,z) => {             // yaw around Y, then pitch around X
+    const x1 = x*cy + z*sy, z1 = -x*sy + z*cy;
+    const y2 = y*cp - z1*sp, z2 = y*sp + z1*cp;
+    return [x1, y2, z2];
+  };
+  const proj = (x,y,z) => {
+    const r = rot(x - ctr[0], y - ctr[1], z - ctr[2]);
+    return [W/2 + r[0]*scale, H/2 - r[1]*scale, r[2]];
+  };
+  // floor grid (X-Z plane) just below the strips
+  if (!cam.screen) {
+  g.strokeStyle = light ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.05)'; g.lineWidth = 1;
+  const fy = M.center[1] - M.radius*1.02, step = M.radius/4;
+  for (let k=-6;k<=6;k++) {
+    let a = proj(M.center[0]+k*step, fy, M.center[2]-6*step), b = proj(M.center[0]+k*step, fy, M.center[2]+6*step);
+    g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke();
+    a = proj(M.center[0]-6*step, fy, M.center[2]+k*step); b = proj(M.center[0]+6*step, fy, M.center[2]+k*step);
+    g.beginPath(); g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]); g.stroke();
+  }
+  }
+  const segs = [];
+  M.lines.forEach(line => {
+    for (let k=0;k<line.length-1;k++) {
+      const i = line[k], j = line[k+1];
+      const p = proj(pos[i*3],pos[i*3+1],pos[i*3+2]), q = proj(pos[j*3],pos[j*3+1],pos[j*3+2]);
+      segs.push([p,q,i,(p[2]+q[2])/2]);
+    }
+  });
+  segs.sort((a,b) => a[3]-b[3]);       // far first
+  const lw = Math.max(2, 3.2*cam.zoom);
+  // butt caps: the strip has ~460 tiny segments; round caps would overlap and pile up the glow
+  g.lineCap = 'butt'; g.lineJoin = 'round';
+  if (cam.unlit) {
+    g.lineWidth = lw; g.strokeStyle = light ? '#d6d2c8' : '#2b2c30'; g.beginPath();
+    for (const s of segs) { g.moveTo(s[0][0],s[0][1]); g.lineTo(s[1][0],s[1][1]); }
+    g.stroke();
+  }
+  g.globalCompositeOperation = light ? 'source-over' : 'lighter';
+  const passes = light ? [[lw*7,0.10],[lw*3,0.22],[lw,1]] : [[lw*4,0.18],[lw*1.8,0.35],[lw,1]];
+  for (const pass of passes) {
+    g.lineWidth = pass[0];
+    for (const s of segs) {
+      const i = s[2]; const [r,gg,b] = displayRGB(col[i*4], col[i*4+1], col[i*4+2]);
+      const lum = Math.max(r,gg,b);
+      if (lum < 0.004) continue;
+      // on a light background, dim light = more transparent (like the glow photo)
+      const a = light ? pass[1]*Math.min(1, lum) : pass[1];
+      const k = light ? 1/lum : 1;
+      g.strokeStyle = `rgba(${Math.min(255,r*k*255)|0},${Math.min(255,gg*k*255)|0},${Math.min(255,b*k*255)|0},${a})`;
+      g.beginPath(); g.moveTo(s[0][0],s[0][1]); g.lineTo(s[1][0],s[1][1]); g.stroke();
+    }
+  }
+  g.globalCompositeOperation = 'source-over';
+  drawParticles(g, proj, light, W, H);
+  if (cam.screen) {   // everything below this line is off the console's screen
+    const yb = proj(ctr[0], scrY0, CONSOLE_FRONT_Z)[1];
+    g.fillStyle = light ? 'rgba(244,245,247,0.85)' : 'rgba(11,13,17,0.85)'; g.fillRect(0, yb, W, H - yb);
+    g.strokeStyle = light ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.18)'; g.setLineDash([5,5]); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, yb); g.lineTo(W, yb); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#9b978e'; g.font = '13px Barlow, system-ui'; const lt = 'Bottom edge of the console\'s picture';
+    g.fillText(lt, 16, yb - 9);
+  }
+  if (hoverPreset) { g.font = '600 20px "Barlow Semi Condensed", system-ui'; g.fillStyle = light ? '#17181a' : '#ece8df'; g.fillText(hoverPreset.name, 18, 74); g.font = '14px Barlow, system-ui'; g.fillStyle = '#9b978e'; g.fillText('Preview. Click to use it.', 18, 96); }
+  if (!cam.screen) M.lines.forEach((line, si) => { const i = line[0]; const p = proj(pos[i*3],pos[i*3+1],pos[i*3+2]);
+    g.fillStyle = '#9b978e'; g.beginPath(); g.arc(p[0],p[1],3,0,7); g.fill();
+    g.fillStyle = '#9b978e'; g.font = '13px Barlow, system-ui'; const lbl = String.fromCharCode(65+si) + ' start';
+    g.fillText(lbl, p[0] < W/2 ? p[0] - g.measureText(lbl).width - 6 : p[0] + 6, p[1] + 14); });
+  if (!cam.screen) for (const [x,y,z,c,l] of [[1,0,0,'#d9826f','X'],[0,1,0,'#8fb996','Y (up)'],[0,0,1,'#8fa9c9','Z (front)']]) {
+    const r = rot(x,y,z); const dx = r[0]*22, dy = -r[1]*22;
+    g.strokeStyle = c; g.lineWidth = 2; g.beginPath(); g.moveTo(W-60,H-40); g.lineTo(W-60+dx,H-40+dy); g.stroke();
+    g.fillStyle = c; g.font = '11px system-ui'; g.fillText(l, W-60+dx*1.25-3, H-40+dy*1.25+4);
+  }
+}
+
+// ---------- particles ----------
+// The bottom 8 rows of shutdown_ramp.gnf are the colour palette of the floating
+// particles (the original palette is warm tan/orange with a little blue, exactly the
+// colours seen on the console). Each particle seems to take a colour from somewhere
+// along that row, so a row of colour blocks = a random mix of those colours.
+const PARTICLE_PRESETS = [
+  {name:'Original', orig:true},
+  {name:'Match strips', match:true},
+  {name:'White sparkle', cols:['#ffffff','#e8eeff','#fff6e8']},
+  {name:'Gold', cols:['#ffcc55','#ffaa33','#ffe08a','#cc8822']},
+  {name:'Ice blue', cols:['#66ccff','#aee6ff','#3388ff','#ffffff']},
+  {name:'Fire', cols:['#ff3300','#ff7a00','#ffbb33','#ff5522']},
+  {name:'Purple haze', cols:['#9933ff','#cc66ff','#6633cc','#ff66cc']},
+  {name:'Neon', cols:['#ff2bd6','#00e5ff','#ff2bd6','#00e5ff']},
+  {name:'Rainbow confetti', cols:['#ff3333','#ffaa00','#ffee33','#33dd55','#33aaff','#aa55ff']},
+  {name:'PlayStation', cols:['#0070d1','#00439c','#66a3ff','#ffffff']},
+  {name:'Green', cols:['#33ff88','#00cc55','#aaffcc']},
+  {name:'Red', cols:['#ff2222','#cc0000','#ff6666']},
+  {name:'Hidden', cols:['#000000'], desc:'black particles (should make them invisible)'},
+];
+let partState = null;   // {cols, mix, bri} last set from the UI
+function setThemeParticleMode(enabled) {
+  followThemeParticles = enabled;
+  SETTINGS.prefs.themeParticles = enabled; saveSettings();
+  $('#partFollowTheme').checked = enabled;
+}
+function customizeParticles() { if (R) setThemeParticleMode(false); }
+function setParticles(cols, mix, bri, silent, fromTheme = false) {
+  if (!R) return;
+  if (!fromTheme) customizeParticles();
+  cols = cols.length ? cols : ['#ffffff'];
+  const n = cols.length, keys = [];
+  if (mix === 'step') { cols.forEach((c, j) => keys.push({t: j/n, c, b: bri})); keys.push({t: 1, c: cols[n-1], b: bri}); }
+  else cols.forEach((c, j) => keys.push({t: n > 1 ? j/(n-1) : 0, c, b: bri}));
+  R.fx[1] = {interp: mix, keys}; R.adj[1] = defaultAdj();
+  partState = {cols: [...cols], mix, bri};
+  if (!silent) fxChanged(); else refreshRamp();
+  syncParticleUI();
+}
+function stripPalette() {
+  const out = [];
+  if (M) S.strips.forEach(st => { if (st.rainbow) out.push('#ff3333','#ffcc00','#33dd55','#33aaff','#aa55ff'); else { out.push(st.a); if (st.gradient) out.push(st.b); } });
+  return [...new Set(out)].slice(0, 8);
+}
+function partFromFile() {   // read current colour blocks back from the row (for the UI)
+  if (R && R.fx[1]) return {cols: R.fx[1].keys.slice(0, R.fx[1].interp === 'step' ? -1 : undefined).map(k => k.c), mix: R.fx[1].interp === 'step' ? 'step' : 'smooth', bri: R.fx[1].keys[0]?.b ?? 1};
+  return null;
+}
+function syncParticleUI() {
+  $('#partFollowTheme').checked = followThemeParticles;
+  $('#partFollowHint').textContent = followThemeParticles ? 'Each effect selects a matching palette. Editing particles keeps your custom colors across theme changes.' : 'Custom particles are kept when you change effects. Enable this option to use theme colors again.';
+  $('#partNoRamp').hidden = !!R; $('#partBody').hidden = !R;
+  $$('#partPresets .pre').forEach(b => { if (b._paint) b._paint(stripPalette().length ? stripPalette() : ['#888']); });
+  if (!R) return;
+  const st = partFromFile() || partState || {cols: ['#c29470','#4f598d','#aa7964'], mix: 'step', bri: 1};
+  const box = $('#partCols'); box.innerHTML = '';
+  (R.fx[1] ? st.cols : []).forEach((c, j) => {
+    const w = document.createElement('span'); w.style.cssText = 'display:inline-flex;align-items:center;gap:1px';
+    w.innerHTML = `<input type="color" value="${c}" style="width:30px;height:24px;padding:0"><button class="small ghost" title="Remove this colour" aria-label="Remove this colour" style="padding:0 5px;font-size:15px;line-height:1">×</button>`;
+    w.querySelector('input').oninput = e => { const p = partFromFile(); p.cols[j] = e.target.value; setParticles(p.cols, p.mix, p.bri); };
+    w.querySelector('button').onclick = () => { const p = partFromFile(); p.cols.splice(j, 1); setParticles(p.cols, p.mix, p.bri); };
+    box.appendChild(w);
+  });
+  if (!R.fx[1]) box.innerHTML = '<span class="muted small-t">Using the palette stored in the file. Pick a palette above or add a colour.</span>';
+  const cur = R.fx[1] ? JSON.stringify(st.cols) : null;
+  $$('#partPresets .pre').forEach(b => b.classList.toggle('on', b._key === 'orig' ? !R.fx[1] : b._key === cur));
+  $('#partMix').value = st.mix; $('#partBri').value = Math.round(st.bri*100); $('#partBriV').textContent = Math.round(st.bri*100) + '%';
+  const cvb = $('#partBar'), W = cvb.clientWidth || 200; cvb.width = W; cvb.height = 14;
+  const g = cvb.getContext('2d');
+  for (let x=0;x<W;x++) { const c = rampAt(1, x/(W-1)); g.fillStyle = `rgb(${c[0]*255|0},${c[1]*255|0},${c[2]*255|0})`; g.fillRect(x,0,1,14); }
+}
+function buildParticlePresets() {
+  const el = $('#partPresets'); el.innerHTML = '';
+  for (const p of PARTICLE_PRESETS) {
+    const b = document.createElement('button'); b.className = 'pre'; b.style.cssText = 'padding:4px;min-height:0';
+    const cols = p.orig ? ['#c29470','#4f598d','#aa7964','#b55f33'] : p.match ? null : p.cols;
+    b.innerHTML = `<div class="sw" style="height:12px;border-radius:3px;display:flex;overflow:hidden"></div><span class="small-t">${p.name}</span>`;
+    const sw = b.querySelector('.sw');
+    const paint = cs => { sw.innerHTML = cs.map(c => `<i style="flex:1;background:${c}"></i>`).join(''); };
+    paint(cols || ['#888']); if (p.match) b._paint = paint;
+    b._key = p.orig ? 'orig' : p.cols ? JSON.stringify(p.cols) : 'match';
+    b.title = p.desc || (p.orig ? 'The colours stored in your ramp file' : p.match ? 'Use the strip colours' : 'Particle colours: ' + p.name);
+    b.onclick = () => {
+      if (!R) { toast('Open shutdown_ramp.gnf to change the particle colours.', 'err'); return; }
+      if (p.orig) { customizeParticles(); R.fx[1] = null; R.adj[1] = defaultAdj(); partState = null; fxChanged(); syncParticleUI(); return; }
+      setParticles(p.match ? stripPalette() : p.cols, 'step', 1);
+    };
+    el.appendChild(b);
+  }
+}
+buildParticlePresets();
+$('#partFollowTheme').onchange = e => {
+  setThemeParticleMode(e.target.checked);
+  if (R && followThemeParticles) {
+    const p = currentThemeParticles || {cols:stripPalette()};
+    setParticles(p.cols, p.mix || 'step', p.bri ?? 1, true, true);
+  }
+  syncParticleUI(); if (R) { draw3d(); drawTimeline(); drawRamp(); commit(); updateGnfBar(); }
+};
+$('#partAdd').onclick = () => { const p = partFromFile() || {cols: [], mix: 'step', bri: 1}; p.cols.push('#ffffff'); setParticles(p.cols, p.mix, p.bri); };
+$('#partMix').onchange = e => { const p = partFromFile(); if (p) setParticles(p.cols, e.target.value, p.bri); };
+$('#partBri').oninput = e => { $('#partBriV').textContent = e.target.value + '%'; const p = partFromFile(); if (p) setParticles(p.cols, p.mix, +e.target.value/100, true), draw3d(), drawRamp(); };
+$('#partBri').onchange = () => { if (R && R.fx[1]) commit(); updateGnfBar(); };
+$('#partShow').onchange = () => draw3d();
+// Preview particles, modelled on a video of the console's shutdown screen: soft sparkles
+// drift across the whole picture, stream into the two strips, sit on them as sparks
+// while the strips light up, then fade. Colours come from the particle rows of the ramp.
+const PARTS = (() => {
+  let sd = 11; const r = () => (sd = (sd*16807) % 2147483647) / 2147483647;
+  return Array.from({length: 480}, () => {
+    const big = r() < 0.22;
+    return {sx: r(), sy: r()*1.05 - 0.05, u: r(), tgt: Math.pow(r(), 0.8), side: r() < 0.5 ? 0 : 1, big,
+      sz: big ? 3 + r()*9 : 0.7 + r()*1.6, ph: r()*6.283, sp: 0.6 + r()*0.8, delay: r()*0.12, jit: (r()-0.5), tw: r()};
+  });
+})();
+const FILE_PALETTE = [[.53,.39,.29],[.54,.42,.37],[.31,.35,.55],[.47,.29,.27],[.67,.47,.39],[.73,.51,.44],[.71,.37,.2],[.56,.4,.32]];
+function particleColour(u) {
+  const c = R ? rampAt(1, u) : FILE_PALETTE[Math.floor(u * FILE_PALETTE.length) % FILE_PALETTE.length];
+  return c.map(v => Math.min(255, v * 380) | 0);   // the console renders them brighter than the palette values
+}
+function drawParticles(g, proj, light, W, H) {
+  if (!M || !$('#partShow').checked) return;
+  const t = anim.t;
+  const appear = clamp(t / 0.1, 0, 1);
+  const fade = t > 0.62 ? clamp(1 - (t - 0.62) / 0.22, 0, 1) : 1;
+  if (appear * fade <= 0) return;
+  // targets: the front of each strip (only the part the console shows, in console framing)
+  if (!M.partLines || M.partLines.framing !== framing) {
+    M.partLines = M.lines.map(l => { const f = l.filter(v => M.pos[v*3+2] >= CONSOLE_FRONT_Z - 2), c = f.filter(v => framing !== 'console' || M.pos[v*3+1] >= CONSOLE_Y0); return c.length > 2 ? c : (f.length > 2 ? f : l); });
+    M.partLines.framing = framing;
+  }
+  const targets = M.partLines;
+  g.globalCompositeOperation = light ? 'source-over' : 'lighter';
+  for (const p of PARTS) {
+    const use = targets[p.side % targets.length];
+    const v = use[Math.floor(p.tgt * (use.length - 1))], tp = proj(M.pos[v*3], M.pos[v*3+1], M.pos[v*3+2]);
+    // drifting start position, in screen space so it fills the picture
+    const dx = Math.sin(p.ph + t*4*p.sp) * 18, dy = Math.cos(p.ph*1.7 + t*3*p.sp) * 14 - t*40*p.sp;
+    const x0 = p.sx * W + dx, y0 = p.sy * H + dy;
+    const gt = clamp((t - 0.14 - p.delay) / 0.3, 0, 1), e = gt*gt*(3 - 2*gt);
+    // once gathered, sparks shimmer upwards along the strip
+    const sparkle = e >= 1 ? Math.sin(t*40 + p.ph*7) * 0.5 + 0.5 : 1;
+    const x = x0 + (tp[0] + p.jit*6 - x0) * e, y = y0 + (tp[1] - 6*p.tw*e - y0) * e;
+    const c = particleColour(p.u);
+    const size = p.big ? p.sz * (1 - 0.8*e) + 0.8*e : p.sz * (1 - 0.3*e);
+    const a = (p.big ? 0.22 + 0.4*e : 0.75) * appear * fade * (0.55 + 0.45*sparkle);
+    if (p.big && size > 2) {   // soft out-of-focus disc
+      g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a*0.45})`; g.beginPath(); g.arc(x, y, size, 0, 7); g.fill();
+      g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a*0.5})`; g.beginPath(); g.arc(x, y, size*0.72, 0, 7); g.fill();
+    } else {
+      g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a})`; g.beginPath(); g.arc(x, y, Math.max(0.6, size), 0, 7); g.fill();
+    }
+  }
+  g.globalCompositeOperation = 'source-over';
+}
+
+// ---------- transport ----------
+function togglePlay() { anim.playing = !anim.playing; if (anim.playing && anim.t >= 1) anim.t = 0; anim.last = performance.now(); setPlayBtn(); if (anim.playing) requestAnimationFrame(tick); }
+const ICON_PLAY = '<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;margin-right:7px;vertical-align:-1px"><path d="M6 4l14 8-14 8z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;margin-right:7px;vertical-align:-1px"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+function setPlayBtn() { $('#playBtn').innerHTML = (anim.playing ? ICON_PAUSE + 'Pause' : ICON_PLAY + 'Play'); $('#playBtn').classList.toggle('primary', !anim.playing); }
+setPlayBtn();
+$('#playBtn').onclick = togglePlay;
+$('#rewBtn').onclick = () => { anim.t = 0; draw3d(); drawTimeline(); };
+$('#durIn').oninput = e => { const v = parseFloat(e.target.value); if (v > 0) { anim.dur = v; drawTimeline(); renderKeyEditor(); SETTINGS.prefs.dur = v; saveSettings(); } };
+$('#loopIn').onchange = e => anim.loop = e.target.checked;
+$('#modelSel').onchange = e => { anim.model = e.target.value; draw3d(); };
+$$('#fxHalf button').forEach(b => b.onclick = () => { anim.half = +b.dataset.half; selKey = -1; $$('#fxHalf button').forEach(x => x.classList.toggle('on', x === b)); drawTimeline(); renderKeyEditor(); draw3d(); });
+function tick(now) {
+  if (!anim.playing) return;
+  const dt = (now - anim.last) / 1000; anim.last = now;
+  anim.t += dt / anim.dur;
+  if (anim.t >= 1) { if (anim.loop) anim.t %= 1; else { anim.t = 1; anim.playing = false; setPlayBtn(); } }
+  draw3d(); drawTimeline();
+  if (anim.playing) requestAnimationFrame(tick);
+}
+
+// ---------- timeline / keyframes ----------
+const tl = $('#tl');
+const curFx = () => R ? R.fx[anim.half] : null;
+function drawTimeline() {
+  $('#timeLbl').textContent = `${(anim.t*anim.dur).toFixed(2)} / ${anim.dur.toFixed(2)} s`;
+  $('#tlWhat').textContent = anim.half ? 'Timeline: particle colours' : 'Timeline: strip brightness';
+  if (!R || curTab !== 'fx' || $('#dock').hidden) return;
+  const dpr = window.devicePixelRatio||1, W = tl.clientWidth, H = tl.clientHeight;
+  if (!W) return;
+  tl.width = W*dpr; tl.height = H*dpr; const g = tl.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  g.fillStyle = '#111214'; g.fillRect(0,0,W,H);
+  const top = 6, bandH = H - 30;
+  for (let x=0;x<W;x++) { const c = rampAt(anim.half, x/(W-1)); g.fillStyle = `rgb(${c[0]*255|0},${c[1]*255|0},${c[2]*255|0})`; g.fillRect(x, top, 1, bandH); }
+  g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.5; g.beginPath();
+  for (let x=0;x<W;x++) { const c = rampAt(anim.half, x/(W-1)); const v = Math.max(...c); const y = top + bandH - 2 - v*(bandH-4); x ? g.lineTo(x,y) : g.moveTo(x,y); }
+  g.stroke();
+  g.fillStyle = '#9b978e'; g.font = '12px Barlow, system-ui';
+  const stepS = anim.dur <= 2 ? 0.25 : anim.dur <= 6 ? 0.5 : 1;
+  for (let j=0; j*stepS <= anim.dur+1e-9; j++) { const s = j*stepS, x = s/anim.dur*(W-1); g.fillRect(x, H-22, 1, 4); if (j % 2 === 0) g.fillText((+s.toFixed(2))+'s', Math.min(W-26, x+2), H-8); }
+  const fx = curFx();
+  if (fx) fx.keys.forEach((k, j) => {
+    const x = k.t*(W-1), y = H - 22;
+    g.fillStyle = rgb2hex(hex2rgb(k.c).map(v => v*Math.max(0.35,k.b)));
+    g.strokeStyle = j === selKey ? '#e3a23a' : '#ece8df'; g.lineWidth = j === selKey ? 2.5 : 1.5;
+    g.beginPath(); g.moveTo(x, y-9); g.lineTo(x+6, y-2); g.lineTo(x, y+5); g.lineTo(x-6, y-2); g.closePath(); g.fill(); g.stroke();
+  });
+  const px = anim.t*(W-1); g.fillStyle = '#000'; g.fillRect(px-2, 0, 4, H-20); g.fillStyle = '#e3a23a'; g.fillRect(px-1, 0, 2, H-20);
+}
+let tlDrag = null;
+function tlPos(e) { const r = tl.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top, W: r.width, H: r.height}; }
+tl.addEventListener('pointerdown', e => {
+  const p = tlPos(e), fx = curFx();
+  tl.setPointerCapture(e.pointerId);
+  if (fx) {
+    let hit = -1, bd = 9;
+    fx.keys.forEach((k, j) => { const d = Math.abs(k.t*(p.W-1) - p.x); if (d < bd && p.y > p.H - 40) { bd = d; hit = j; } });
+    if (hit >= 0) { selKey = hit; tlDrag = {key: fx.keys[hit]}; renderKeyEditor(); drawTimeline(); return; }
+  }
+  tlDrag = {scrub:true}; anim.t = clamp(p.x/(p.W-1), 0, 1); if (anim.playing) togglePlay(); draw3d(); drawTimeline();
+});
+tl.addEventListener('pointermove', e => {
+  if (!tlDrag) return; const p = tlPos(e);
+  if (tlDrag.key) { tlDrag.key.t = clamp(p.x/(p.W-1), 0, 1); tlDrag.moved = true; refreshRamp(); draw3d(); drawTimeline(); renderKeyEditor(); }
+  else { anim.t = clamp(p.x/(p.W-1), 0, 1); draw3d(); drawTimeline(); }
+});
+tl.addEventListener('pointerup', () => {
+  if (tlDrag && tlDrag.key && tlDrag.moved) { const fx = curFx(), k = tlDrag.key; sortKeys(fx); selKey = fx.keys.indexOf(k); fxChanged(); }
+  tlDrag = null;
+});
+tl.addEventListener('dblclick', e => { const p = tlPos(e); addKeyAt(clamp(p.x/(p.W-1),0,1)); });
+function ensureFx(part = anim.half) {
+  if (R.fx[part]) return R.fx[part];
+  // turn the current pixels of this half into editable keyframes
+  const keys = []; const n = 12;
+  for (let j=0;j<=n;j++) { const t = j/n, c = rampAt(part, t), m = Math.max(...c, 1e-6); keys.push({t, c: rgb2hex(c.map(v => v/m)), b: +m.toFixed(3)}); }
+  R.fx[part] = {interp:'smooth', keys};
+  return R.fx[part];
+}
+function addKeyAt(t) {
+  const fx = ensureFx(), c = rampAt(anim.half, t), m = Math.max(...c, 1e-6);
+  const k = {t, c: m > 0.01 ? rgb2hex(c.map(v => v/m)) : '#ffffff', b: +m.toFixed(3)};
+  fx.keys.push(k); sortKeys(fx); selKey = fx.keys.indexOf(k); fxChanged();
+}
+function deleteKey() { const fx = curFx(); if (!fx || selKey < 0 || fx.keys.length <= 1) return; fx.keys.splice(selKey, 1); selKey = -1; fxChanged(); }
+function fxChanged(noCommit) { if (anim.half === 1) customizeParticles(); refreshRamp(); syncParticleUI(); draw3d(); drawTimeline(); renderKeyEditor(); updateGnfBar(); drawRamp(); if (!noCommit) commit(); else updateFxBar(); }
+function renderKeyEditor() {
+  const el = $('#keyEd'); if (!R) { el.innerHTML = ''; return; }
+  const fx = curFx();
+  if (!fx) {
+    el.innerHTML = `<span class="muted small-t">The timeline shows the file's own pixels.</span><button class="small" id="kConv">Edit as keyframes</button><span class="muted small-t">or pick an effect. Double-click the timeline to add a keyframe.</span>`;
+    $('#kConv').onclick = () => { ensureFx(); fxChanged(); };
+    return;
+  }
+  const k = fx.keys[selKey];
+  el.innerHTML = `<button class="small" id="kAdd">Add keyframe</button>
+    <label>Blend</label><select id="kInt"><option value="smooth">Smooth</option><option value="ease">Ease</option><option value="step">Hard cut</option></select>
+    ${k ? `<span style="width:1px;height:20px;background:var(--rule)"></span><b class="small-t">Keyframe ${selKey+1} of ${fx.keys.length}</b>
+      <label>Colour</label><input type="color" id="kCol" value="${k.c}">
+      <label>Brightness</label><input type="range" id="kBri" min="0" max="100" value="${Math.round(k.b*100)}" style="max-width:140px"><span class="muted small-t" id="kBriV">${Math.round(k.b*100)}%</span>
+      <label>At</label><input type="number" id="kT" min="0" max="${anim.dur}" step="0.01" value="${(k.t*anim.dur).toFixed(2)}" style="width:70px"><span class="muted">s</span>
+      <button class="small danger" id="kDel" ${fx.keys.length<=1?'disabled':''}>Delete</button>`
+    : '<span class="muted small-t">Click a keyframe to change it, drag to move it, double-click the timeline to add one.</span>'}
+    <span class="spacer"></span><button class="small ghost" id="kOrig" title="Go back to the texture's own pixels for these rows">Use the file's pixels</button>`;
+  $('#kInt').value = fx.interp;
+  $('#kInt').onchange = e => { fx.interp = e.target.value; fxChanged(); };
+  $('#kAdd').onclick = () => addKeyAt(anim.t);
+  $('#kOrig').onclick = () => { R.fx[anim.half] = null; selKey = -1; fxChanged(); };
+  if (k) {
+    $('#kCol').oninput = e => { k.c = e.target.value; fxChanged(true); };
+    $('#kCol').onchange = () => commit();
+    $('#kBri').oninput = e => { k.b = e.target.value/100; $('#kBriV').textContent = e.target.value + '%'; refreshRamp(); draw3d(); drawTimeline(); updateFxBar(); };
+    $('#kBri').onchange = () => fxChanged();
+    $('#kT').onchange = e => { k.t = clamp(parseFloat(e.target.value)/anim.dur || 0, 0, 1); sortKeys(fx); selKey = fx.keys.indexOf(k); fxChanged(); };
+    $('#kDel').onclick = deleteKey;
+  }
+}
+
+// ---------- effect presets ----------
+const K = (t, c, b=1) => ({t, c, b});
+function envelope(t, a=0.08, r=0.12) { return Math.min(1, t/a, (1-t)/r); }
+function rand(seed) { let s = seed; return () => { s = (s*16807) % 2147483647; return s / 2147483647; }; }
+function flashes(n, color, on=0.5, tail=true) {
+  const k = [K(0,color,0)]; const span = tail ? 0.85 : 1;
+  for (let i=0;i<n;i++) { const a = i/n*span, b = a + span/n*on; k.push(K(a+0.0001,color,1), K(b,color,0)); }
+  k.push(K(1,color,0)); return k;
+}
+function pulses(n, color, lo=0.05) {
+  const k = []; const m = n*8;
+  for (let j=0;j<=m;j++) { const t = j/m; const v = Math.pow(Math.sin(Math.PI*t*n), 2); k.push(K(t, color, +(lo + (1-lo)*v*envelope(t,0.04,0.04)).toFixed(3))); }
+  return k;
+}
+const BUILTIN = [
+  {name:'As opened', desc:'Reset strip colours and upper ramp rows to the loaded files; does not restore stock assets', original:true},
+  {name:'Orange glow', desc:'Bright at the bottom, fading upwards (like the console light)', strips:{a:'#f59a12', fade:'startbright', brightness:1.3}, interp:'smooth', keys:[K(0,'#ffffff',0),K(0.15,'#ffffff',1),K(0.85,'#ffffff',1),K(1,'#ffffff',0)]},
+  {name:'Blue glow', desc:'Bright at the bottom, fading upwards', strips:{a:'#2f6bff', fade:'startbright', brightness:1.3}, interp:'smooth', keys:[K(0,'#ffffff',0),K(0.15,'#ffffff',1),K(0.85,'#ffffff',1),K(1,'#ffffff',0)]},
+  {name:'White glow', desc:'Bright at the bottom, fading upwards', strips:{a:'#ffffff', fade:'startbright', brightness:1.3}, interp:'smooth', keys:[K(0,'#ffffff',0),K(0.15,'#ffffff',1),K(0.85,'#ffffff',1),K(1,'#ffffff',0)]},
+  {name:'Classic white', strips:{a:'#ffffff', fade:'original'}, interp:'smooth', keys:[K(0,'#000000',0),K(0.12,'#fff3e0',1),K(0.55,'#ffffff',0.95),K(0.8,'#c9d6ea',0.7),K(1,'#000000',0)]},
+  {name:'PlayStation blue', strips:{a:'#1f5bff', b:'#00c8ff', gradient:true, fade:'original'}, interp:'smooth', keys:[K(0,'#000000',0),K(0.15,'#2b6bff',1),K(0.6,'#00b4ff',0.9),K(1,'#000000',0)]},
+  {name:'Rest-mode orange', strips:{a:'#ff8a00', fade:'original'}, interp:'smooth', keys:pulses(2,'#ff8a00',0.08)},
+  {name:'Breathing blue', strips:{a:'#2b6bff', fade:'original'}, interp:'smooth', keys:pulses(3,'#3b7bff',0.05)},
+  {name:'Heartbeat', strips:{a:'#ff1f3d', fade:'solid', brightness:0.9}, interp:'ease', keys:[K(0,'#ff1f3d',0),K(0.08,'#ff1f3d',1),K(0.14,'#ff1f3d',0.15),K(0.2,'#ff1f3d',0.85),K(0.32,'#ff1f3d',0),K(0.5,'#ff1f3d',0),K(0.58,'#ff1f3d',1),K(0.64,'#ff1f3d',0.15),K(0.7,'#ff1f3d',0.85),K(0.82,'#ff1f3d',0),K(1,'#ff1f3d',0)]},
+  {name:'Police', strips:[{a:'#ff1a1a', fade:'solid'},{a:'#1a4dff', fade:'solid'}], interp:'step', keys:flashes(8,'#ffffff',0.45)},
+  {name:'Strobe', strips:{a:'#ffffff', fade:'solid'}, interp:'step', keys:flashes(14,'#ffffff',0.3)},
+  {name:'Rainbow', desc:'Rainbow colours along the strips (works when the console uses the ramp as brightness)', strips:{a:'#ffffff', rainbow:true, rbCycles:1, fade:'solid', brightness:1.1}, interp:'smooth', keys:pulses(2,'#ffffff',0.35)},
+  {name:'Rainbow stripes', desc:'Two rainbow cycles per strip with a breathing glow', strips:{a:'#ffffff', rainbow:true, rbCycles:2, fade:'solid', brightness:1.1}, interp:'smooth', keys:pulses(3,'#ffffff',0.25)},
+  {name:'Fire', strips:{a:'#ff2a00', b:'#ffb300', gradient:true, fade:'original', brightness:1.2}, interp:'smooth', keys:(() => { const r = rand(7); return Array.from({length:33}, (_,j) => { const t=j/32; return K(t, rgb2hex(hsl2rgb(0.02+0.08*r(),1,0.5)), +((0.55+0.45*r())*envelope(t,0.06,0.15)).toFixed(3)); }); })()},
+  {name:'Ice', strips:{a:'#7fd8ff', b:'#ffffff', gradient:true, fade:'original'}, interp:'smooth', keys:[K(0,'#000000',0),K(0.3,'#c6efff',1),K(0.7,'#6fb6ff',0.75),K(1,'#000000',0)]},
+  {name:'Sunset', strips:{a:'#ff5e3a', b:'#ffb347', gradient:true, fade:'original'}, interp:'smooth', keys:[K(0,'#3a0ca3',0),K(0.22,'#7b2cbf',0.8),K(0.5,'#ff6d00',1),K(0.78,'#ff9e00',0.7),K(1,'#000000',0)]},
+  {name:'Neon pulse', strips:{a:'#ff00cc', b:'#00e5ff', gradient:true, fade:'solid'}, interp:'smooth', keys:pulses(3,'#ffffff',0.1)},
+  {name:'Matrix', strips:{a:'#00ff66', fade:'stripes', stripes:14}, interp:'step', keys:(() => { const r = rand(3); return Array.from({length:41}, (_,j) => { const t=j/40; return K(t, '#33ff88', +((r() < 0.7 ? 0.9 : 0.2)*envelope(t,0.03,0.1)).toFixed(3)); }); })()},
+  {name:'Comet', strips:{a:'#ffffff', b:'#00e5ff', gradient:true, fade:'comet', brightness:1.4}, interp:'smooth', keys:[K(0,'#000000',0),K(0.2,'#ffffff',1),K(0.75,'#ffffff',1),K(1,'#000000',0)]},
+  {name:'Slow fade', strips:{a:'#ffffff', fade:'original'}, interp:'ease', keys:[K(0,'#000000',0),K(0.35,'#ffffff',1),K(1,'#000000',0)]},
+  {name:'Quick flash', strips:{a:'#ffffff', fade:'original'}, interp:'ease', keys:[K(0,'#000000',0),K(0.06,'#ffffff',1),K(0.3,'#ffffff',0),K(1,'#000000',0)]},
+  {name:'Lights off', strips:{a:'#ffffff', fade:'original'}, interp:'step', keys:[K(0,'#000000',0),K(1,'#000000',0)]},
+];
+// ---------- side panel tabs ----------
+let sidePane = 'effects';
+// the Strips tab needs the strip file; Particles needs the ramp texture
+function syncSideTabs() {
+  const tabs = $$('#side-fx .sidetabs button'), st = tabs.find(b => b.dataset.pane === 'strips');
+  st.disabled = !M; st.title = M ? '' : 'Open shutdown_lightbar.fbxd to edit the strips';
+  if (!M && sidePane === 'strips') showPane('effects');
+}
+function showPane(name) {
+  sidePane = name;
+  $$('#side-fx .sidetabs button').forEach(b => b.classList.toggle('on', b.dataset.pane === name));
+  $$('#side-fx .pane').forEach(p => p.hidden = p.dataset.pane !== name);
+  if (name === 'strips') syncStripUI();
+  if (name === 'particles') syncParticleUI();
+  const half = name === 'particles' ? 1 : 0;
+  if (anim.half !== half) { anim.half = half; selKey = -1; $$('#fxHalf button').forEach(x => x.classList.toggle('on', +x.dataset.half === half)); drawTimeline(); renderKeyEditor(); }
+  try { SETTINGS.prefs.sidePane = name; saveSettings(); } catch (e) {}
+}
+$$('#side-fx .sidetabs button').forEach(b => b.onclick = () => showPane(b.dataset.pane));
+let stripSel = 1;   // which strip the editor shows when the strips are edited separately
+$$('#stripPick button').forEach(b => b.onclick = () => { stripSel = +b.dataset.strip; syncStripUI(); });
+// effect presets that also recolour the particles
+{
+  const PC = {'Police':['#ff2222','#2255ff'], 'Rainbow':['#ff3333','#ffaa00','#ffee33','#33dd55','#33aaff','#aa55ff'],
+    'Rainbow stripes':['#ff3333','#ffaa00','#ffee33','#33dd55','#33aaff','#aa55ff'], 'Fire':['#ff3300','#ff7a00','#ffbb33','#ff5522'],
+    'Ice':['#66ccff','#aee6ff','#3388ff','#ffffff'], 'PlayStation blue':['#0070d1','#00439c','#66a3ff','#ffffff'],
+    'Neon pulse':['#ff2bd6','#00e5ff'], 'Matrix':['#33ff88','#00cc55','#aaffcc']};
+  PC['Orange glow'] = PC['Rest-mode orange'] = ['#ff8a00','#ffb347','#ffe1ad'];
+  PC['Blue glow'] = PC['Breathing blue'] = ['#2b6bff','#66a3ff','#b9dfff'];
+  PC['White glow'] = PC['Classic white'] = PC['Strobe'] = PC['Slow fade'] = PC['Quick flash'] = ['#ffffff','#e8eeff','#fff6e8'];
+  PC['Heartbeat'] = ['#ff1f3d','#ff5b70','#ffabb7'];
+  PC['Sunset'] = ['#ff5e3a','#ffb347','#ff9671'];
+  PC['Comet'] = ['#ffffff','#00e5ff','#a8f7ff'];
+  PC['Lights off'] = ['#000000'];
+  for (const p of BUILTIN) {
+    if (p.original) continue;
+    const strips = Array.isArray(p.strips) ? p.strips : [p.strips];
+    p.particles = {cols: PC[p.name] || [...new Set(strips.flatMap(s => s.gradient ? [s.a,s.b] : [s.a]))]};
+  }
+}
+function applyPreset(p) {
+  currentThemeParticles = p.particles ? JSON.parse(JSON.stringify(p.particles)) : null;
+  if (p.original) {
+    if (M) S = defaultStripState();
+    if (R) { R.fx[0] = null; R.adj[0] = defaultAdj(); }
+  } else {
+    if (M && p.strips) {
+      if (Array.isArray(p.strips)) { $('#linkStrips').checked = false; SETTINGS.prefs.linkStrips = false; saveSettings(); }
+      S.strips = S.strips.map((old, i) => {
+        const src = Array.isArray(p.strips) ? p.strips[i % p.strips.length] : p.strips;
+        return Object.assign(defaultStrip(i), {b: src.a}, src, {touched:true});
+      });
+    }
+    if (R && p.keys) { R.fx[0] = {interp: p.interp || 'smooth', keys: p.keys.map(k => ({...k}))}; R.adj[0] = defaultAdj(); }
+    if (R && p.particles && followThemeParticles) {
+      setParticles(p.particles.cols, p.particles.mix || 'step', p.particles.bri ?? 1, true, true);
+      if (p.particleMode === 'custom') setThemeParticleMode(false);
+    }
+    if (!R && p.keys) {
+      virtFx = {interp: p.interp || 'smooth', keys: [...p.keys].sort((a,b) => a.t-b.t)};
+      if (!applyPreset.warned) { applyPreset.warned = true; toast('Open <b>shutdown_ramp.gnf</b> to save the ramp pattern too. Console timing remains unverified. Strip colours save without it.', '', 7000); }
+    }
+  }
+  if (p.original) virtFx = null;
+  if (anim.model === 'static') { anim.model = 'bright'; $('#modelSel').value = 'bright'; }
+  selKey = -1; anim.t = 0;
+  if (R) refreshRamp();
+  syncStripUI(); syncRampUI(); renderKeyEditor(); draw3d(); drawTimeline(); drawRamp(); commit(); updateGnfBar();
+  $$('.pre').forEach(b => b.classList.toggle('on', b.dataset.name === p.name));
+  if ((R || virtFx) && !anim.playing && !p.original) togglePlay();
+}
+let hoverPreset = null, hoverStarted = false;
+let virtFx = null;   // preset animation used for the preview when no ramp texture is open
+function presetStrips(p) {
+  if (!M) return null;
+  if (p.original || !p.strips) return M.strands.map((_, i) => defaultStrip(i));
+  return M.strands.map((_, i) => { const src = Array.isArray(p.strips) ? p.strips[i % p.strips.length] : p.strips;
+    return Object.assign(defaultStrip(i), {b: src.a}, src, {touched:true}); });
+}
+// what the ramp contributes at time t for a preset (original = the texture's own top rows)
+function origRampAt(t) {
+  if (!R) return [1,1,1];
+  const x = clamp(Math.round(t*(R.w-1)), 0, R.w-1), i = (1*R.w + x)*4;
+  return [R.orig[i]/255, R.orig[i+1]/255, R.orig[i+2]/255];
+}
+function presetFactor(p, t) {
+  if (p.original || !p.keys) return origRampAt(t);
+  return keyColorAt({interp: p.interp || 'smooth', keys: [...p.keys].sort((a,b) => a.t-b.t)}, t);
+}
+// small front-view geometry for the tiles
+function tileGeom() {
+  if (M && M.tile && M.tile.framing === framing) return M.tile;
+  let lines;
+  if (M) lines = M.lines.map(l => { const n = 70, out = []; for (let j=0;j<n;j++) out.push(l[Math.round(j/(n-1)*(l.length-1))]); return out; });
+  const g = {lines, pts: null};
+  if (M) {
+    let mnx=Infinity,mxx=-Infinity,mny=Infinity,mxy=-Infinity;
+    for (const l of lines) for (const i of l) { mnx=Math.min(mnx,M.pos[i*3]); mxx=Math.max(mxx,M.pos[i*3]); mny=Math.min(mny,M.pos[i*3+1]); mxy=Math.max(mxy,M.pos[i*3+1]); }
+    if (framing === 'console') mny = CONSOLE_Y0;
+    g.box = [mnx,mxx,mny,mxy]; g.framing = framing; M.tile = g;
+  }
+  return g;
+}
+function renderTile(cvEl, p, t) {
+  const W = cvEl.width, H = cvEl.height, g = cvEl.getContext('2d');
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = '#000'; g.fillRect(0,0,W,H);
+  const f = modelF(presetFactor(p, t));
+  g.lineCap = 'butt'; g.lineJoin = 'round'; g.globalCompositeOperation = 'lighter';
+  if (M) {
+    const geo = tileGeom(), [x0,x1,y0,y1] = geo.box, sc = Math.min((W-16)/(x1-x0||1), (H-14)/(y1-y0||1));
+    const ox = W/2 - (x0+x1)/2*sc, oy = (H-6)/2 + (y0+y1)/2*sc;
+    const col = stripColors(presetStrips(p));
+    g.globalCompositeOperation = 'source-over'; g.lineWidth = 2; g.strokeStyle = '#1f2023'; g.beginPath();
+    for (const l of geo.lines) { g.moveTo(ox + M.pos[l[0]*3]*sc, oy - M.pos[l[0]*3+1]*sc); for (let k=1;k<l.length;k++) g.lineTo(ox + M.pos[l[k]*3]*sc, oy - M.pos[l[k]*3+1]*sc); }
+    g.stroke(); g.globalCompositeOperation = 'lighter';
+    for (const [lw, a] of [[6,0.22],[2,1]]) {
+      g.lineWidth = lw;
+      for (const l of geo.lines) for (let k=0;k<l.length-1;k++) {
+        const i = l[k], j = l[k+1];
+        const [r,gg,b] = displayRGB(col[i*4]*f[0], col[i*4+1]*f[1], col[i*4+2]*f[2]);
+        if (r+gg+b < 0.01) continue;
+        g.strokeStyle = `rgba(${r*255|0},${gg*255|0},${b*255|0},${a})`;
+        g.beginPath(); g.moveTo(ox + M.pos[i*3]*sc, oy - M.pos[i*3+1]*sc); g.lineTo(ox + M.pos[j*3]*sc, oy - M.pos[j*3+1]*sc); g.stroke();
+      }
+    }
+  } else {
+    // no strip file loaded: show the ramp colour as a glowing bar
+    const sc = p.strips ? hex2rgb((Array.isArray(p.strips) ? p.strips[0] : p.strips).a) : [1,1,1];
+    const [r,gg,b] = displayRGB(f[0]*sc[0], f[1]*sc[1], f[2]*sc[2]);
+    g.fillStyle = `rgb(${r*255|0},${gg*255|0},${b*255|0})`; g.fillRect(W*0.2, H*0.35, W*0.6, H*0.2);
+  }
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(0, H-2, W, 2);
+  g.fillStyle = 'rgba(236,232,223,.55)'; g.fillRect(0, H-2, W*t, 2);
+}
+function presetThumb(cvEl, p) { cvEl.width = 150; cvEl.height = 74; renderTile(cvEl, p, 0.4); }
+let tileClock = 0, tilesRunning = false;
+function tilesLoop(now) {
+  if (editorStopped) return;
+  const vis = curTab === 'fx' && !$('#side-fx').hidden;
+  if (vis && now - tileClock > 33) {
+    tileClock = now;
+    const t = ((now/1000) % anim.dur) / anim.dur;
+    if (sidePane === 'effects') $$('.pre canvas, .mypre canvas').forEach(c => { if (c._preset) renderTile(c, c._preset, t); });
+  }
+  requestAnimationFrame(tilesLoop);
+}
+if (!tilesRunning) { tilesRunning = true; requestAnimationFrame(tilesLoop); }
+function hookHover(el, p) {
+  el.addEventListener('mouseenter', () => {
+    hoverPreset = p;
+    if (!M) return;
+    if (!anim.playing) { hoverStarted = true; anim.t = 0; togglePlay(); }
+  });
+  el.addEventListener('mouseleave', () => {
+    if (hoverPreset !== p) return;
+    hoverPreset = null;
+    if (hoverStarted && anim.playing) togglePlay();
+    hoverStarted = false; draw3d(); drawTimeline();
+  });
+}
+function buildPresetGrid() {
+  const gEl = $('#presetGrid'); gEl.innerHTML = '';
+  BUILTIN.forEach(p => {
+    const b = document.createElement('button'); b.className = 'pre'; b.dataset.name = p.name;
+    b.innerHTML = `<canvas></canvas><span>${esc(p.name)}</span>`; b.title = (p.desc ? p.desc + ' – ' : '') + 'hover to preview, click to apply';
+    const c = b.querySelector('canvas'); c._preset = p; presetThumb(c, p);
+    b.onclick = () => { hoverPreset = null; hoverStarted = false; applyPreset(p); };
+    hookHover(b, p);
+    gEl.appendChild(b);
+  });
+}
+buildPresetGrid();
+let presetFolder = '';
+$('#presetFolder').onclick = () => { if (presetFolder) reveal(presetFolder); };
+async function loadMyPresets() {
+  try {
+    const r = await api('/api/presets/list');
+    presetFolder = r.dir;
+    const el = $('#myPresets');
+    if (!r.presets || !r.presets.length) { el.textContent = 'None yet. Save an effect here, or use Folder to find and share your saved effects.'; return; }
+    el.innerHTML = '';
+    r.presets.forEach(({file, preset}) => {
+      const d = document.createElement('div'); d.className = 'mypre';
+      d.innerHTML = `<button class="small"><canvas style="width:60px;height:30px;display:inline-block;vertical-align:middle;border-radius:4px;margin-right:8px"></canvas>${esc(preset.name || file)}</button><button class="small ghost" title="Delete this effect">Delete</button>`;
+      const c = d.querySelector('canvas'); c._preset = preset; c.width = 120; c.height = 60; renderTile(c, preset, 0.4);
+      d.children[0].onclick = () => { hoverPreset = null; hoverStarted = false; applyPreset(preset); };
+      hookHover(d.children[0], preset);
+      d.children[1].onclick = async () => { if (!confirm('Delete the effect "' + (preset.name||file) + '"?')) return; try { await api('/api/presets/delete', {file}); loadMyPresets(); } catch (e) { toast(esc(e.message), 'err'); } };
+      el.appendChild(d);
+    });
+  } catch (e) {}
+}
+$('#savePreset').onclick = async () => {
+  const name = prompt('Name for this preset:', 'My effect'); if (!name) return;
+  const p = {name, version:1};
+  if (M) p.strips = S.strips.map(s => ({a:s.a, b:s.b, gradient:s.gradient, rainbow:!!s.rainbow, rbCycles:s.rbCycles || 1, fade:s.fade, stripes:s.stripes, brightness:s.brightness}));
+  if (R) { const fx = ensureFx(0); p.interp = fx.interp; p.keys = fx.keys.map(k => ({...k})); refreshRamp(); }
+  if (R && partFromFile()) { p.particles = partFromFile(); p.particleMode = followThemeParticles ? 'theme' : 'custom'; }
+  try { const r = await api('/api/presets/save', {name, preset:p}); toast(`Saved the effect <b>${esc(name)}</b>`, 'ok'); loadMyPresets(); } catch (e) { toast(esc(e.message), 'err'); }
+};
+loadMyPresets();
+
+// ---------- saving ----------
+async function saveFbxdTo(dst) {
+  const r = await api('/api/save/fbxd', {src: M.info.path, dst: dst || '', pos: Array.from(computePositions()), col: Array.from(stripColors())});
+  if (!dst || dst === M.info.path) { M.info.hasBackup = M.info.hasBackup || !!r.backup; M.saved = JSON.stringify(S); }
+  return r;
+}
+async function saveGnfTo(dst) {
+  const r = await api('/api/save/gnf', {src: R.info.path, dst: dst || '', rgba: bytesToB64(new Uint8Array(R.px.buffer))});
+  if (!dst || dst === R.info.path) { R.info.hasBackup = R.info.hasBackup || !!r.backup; R.saved = rampStateKey(); }
+  $('#gnfQ').textContent = `Last save: compression quality ${r.psnr >= 99 ? 'lossless' : r.psnr.toFixed(1) + ' dB'}. Anything above 40 dB looks the same as the original.`;
+  return r;
+}
+const bakNote = r => r.backup ? `. A backup is kept as ${esc(baseName(r.backup))}` : '';
+async function saveEffect() {
+  const msgs = [];
+  try {
+    if (M && fbxdDirty()) { const r = await saveFbxdTo(); msgs.push(`Saved <b>${esc(r.name)}</b>${bakNote(r)}`); }
+    if (R && rampDirty()) { const r = await saveGnfTo(); msgs.push(`Saved <b>${esc(r.name)}</b>${bakNote(r)}`); }
+    toast(msgs.length ? msgs.join('<br>') : 'Nothing to save', msgs.length ? 'ok' : '');
+    if (msgs.length) flashSaved();
+  } catch (e) { toast('Couldn\'t save: ' + esc(e.message), 'err'); }
+  updateFxBar(); updateGnfBar();
+}
+$('#saveAsFx').onclick = async () => {
+  try {
+    if (M) { const p = await askSavePath(M.info.name.replace(/\.fbxd$/i,'') + '_edited.fbxd', M.info.dir); if (p) { const r = await saveFbxdTo(p); toast(`Saved copy <b>${esc(r.name)}</b>`, 'ok'); } }
+    if (R) { const p = await askSavePath(R.info.name.replace(/\.gnf$/i,'') + '_edited.gnf', R.info.dir); if (p) { const r = await saveGnfTo(p); toast(`Saved copy <b>${esc(r.name)}</b>`, 'ok'); } }
+  } catch (e) { toast('Couldn\'t save: ' + esc(e.message), 'err'); }
+};
+$('#resetFx').onclick = () => {
+  if (M) S = defaultStripState();
+  if (R) { R.fx = [null,null]; R.adj = [defaultAdj(), defaultAdj()]; R.src = R.orig; refreshRamp(); }
+  selKey = -1; syncStripUI(); syncRampUI(); renderKeyEditor(); draw3d(); drawTimeline(); drawRamp(); commit(); updateGnfBar();
+};
+$('#restoreFx').onclick = async () => {
+  if (!confirm('Replace loaded strip/ramp files with their .bak backups? Backups may contain earlier custom edits; they are not verified stock files. Unsaved changes will be discarded.')) return;
+  try {
+    const paths = [];
+    if (M && M.info.hasBackup) { await api('/api/restore', {path: M.info.path}); paths.push(M.info.path); }
+    if (R && R.info.hasBackup) { await api('/api/restore', {path: R.info.path}); paths.push(R.info.path); }
+    for (const p of paths) await loadPath(p, {quiet:true, noSibling:true});
+    toast('Backups restored', 'ok');
+  } catch (e) { toast(esc(e.message), 'err'); }
+};
+
+// =====================================================================
+// RAMP PIXELS page
+// =====================================================================
+let half = 0;
+$$('#halfSeg button').forEach(b => b.onclick = () => { half = +b.dataset.half; $$('#halfSeg button').forEach(x => x.classList.toggle('on', x === b)); syncRampUI(); });
+const A_ = () => R.adj[half];
+function syncRampUI() {
+  if (!R) return;
+  const h = A_();
+  $('#gHue').value = h.hue; $('#gHueV').textContent = h.hue + '°';
+  $('#gSat').value = h.sat; $('#gSatV').textContent = h.sat + '%';
+  $('#gBri').value = h.bri; $('#gBriV').textContent = h.bri + '%';
+  $('#gRecolor').checked = h.recolor; $('#gKeep').checked = h.keep; $('#gStr').value = h.str; $('#gStrV').textContent = h.str + '%';
+  const st = $('#stops'); st.innerHTML = '';
+  h.stops.forEach((s, k) => {
+    const d = document.createElement('div'); d.className = 'stop';
+    d.innerHTML = `<input type="color" value="${s.c}"><input type="range" min="0" max="100" value="${Math.round(s.p*100)}"><span class="muted small-t" style="width:34px">${Math.round(s.p*100)}%</span><button class="small" ${h.stops.length<2?'disabled':''}>✕</button>`;
+    d.children[0].oninput = e => { s.c = e.target.value; h.recolor = true; $('#gRecolor').checked = true; rampChanged(); };
+    d.children[1].oninput = e => { s.p = e.target.value/100; d.children[2].textContent = e.target.value + '%'; h.recolor = true; $('#gRecolor').checked = true; rampChanged(); };
+    d.children[3].onclick = () => { h.stops.splice(k,1); syncRampUI(); rampChanged(); };
+    st.appendChild(d);
+  });
+}
+$('#addStop').onclick = () => { const h = A_(); h.stops.push({p:1, c:'#ffffff'}); h.recolor = true; syncRampUI(); rampChanged(); };
+[['gHue','hue','°'],['gSat','sat','%'],['gBri','bri','%'],['gStr','str','%']].forEach(([id,k,u]) => {
+  $('#'+id).oninput = e => { A_()[k] = +e.target.value; $('#'+id+'V').textContent = e.target.value + u; rampChanged(); };
+});
+$('#gRecolor').onchange = e => { A_().recolor = e.target.checked; rampChanged(); };
+$('#gKeep').onchange = e => { A_().keep = e.target.checked; rampChanged(); };
+(() => { const sw = $('#rampSw'); SWATCHES.forEach(p => { const b = document.createElement('button'); b.style.background = p; b.title = 'Single colour ' + p; b.onclick = () => { const h = A_(); h.stops = [{p:0,c:p}]; h.recolor = true; syncRampUI(); rampChanged(); }; sw.appendChild(b); }); })();
+$('#resetGnf').onclick = () => { R.adj[half] = defaultAdj(); syncRampUI(); rampChanged(); };
+function rampChanged() { if (half === 1) customizeParticles(); refreshRamp(); syncParticleUI(); drawRamp(); updateGnfBar(); updateFxBar(); }
+function paintRamp(canvas, px) {
+  canvas.width = R.w; canvas.height = R.h;
+  canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(px), R.w, R.h), 0, 0);
+  canvas.style.height = Math.max(96, canvas.clientWidth / R.w * R.h * 0.9) + 'px';
+}
+function drawRamp() {
+  if (!R || curTab !== 'gnf') return;
+  const px = R.px;
+  paintRamp($('#rampCv'), px); paintRamp($('#rampOrigCv'), R.orig);
+  const pc = $('#rampPlot'), dpr = window.devicePixelRatio||1, W = pc.clientWidth, Hh = pc.clientHeight;
+  pc.width = W*dpr; pc.height = Hh*dpr; const g = pc.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  g.fillStyle = '#121315'; g.fillRect(0,0,W,Hh);
+  g.strokeStyle = 'rgba(255,255,255,.06)'; for (let k=1;k<4;k++){ g.beginPath(); g.moveTo(0,Hh*k/4); g.lineTo(W,Hh*k/4); g.stroke(); }
+  for (const [row, dash] of [[2,[]],[R.h/2+2,[6,4]]]) for (const [c, color] of [[0,'#ff6b6b'],[1,'#5be37d'],[2,'#4da3ff']]) {
+    g.setLineDash(dash); g.strokeStyle = color; g.lineWidth = 1.6; g.beginPath();
+    for (let x=0;x<R.w;x++) { const v = px[(row*R.w+x)*4+c]/255; const X = x/(R.w-1)*W, Y = Hh-6 - v*(Hh-12); x ? g.lineTo(X,Y) : g.moveTo(X,Y); }
+    g.stroke();
+  }
+  g.setLineDash([]);
+}
+$('#impPng').onclick = () => $('#pngFile').click();
+$('#pngFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const img = new Image(); img.src = URL.createObjectURL(f); await img.decode().catch(()=>{});
+  if (!img.width) { toast('Couldn\'t read that image. Use a PNG.', 'err'); return; }
+  const c = document.createElement('canvas'); c.width = R.w; c.height = R.h; const g = c.getContext('2d');
+  g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, R.w, R.h);
+  customizeParticles();
+  R.src = new Uint8Array(g.getImageData(0,0,R.w,R.h).data.buffer);
+  R.adj = [defaultAdj(), defaultAdj()]; R.fx = [null,null]; R.importGen++; syncRampUI(); rampChanged(); commit(); drawTimeline(); draw3d(); renderKeyEditor();
+  toast(`Imported <b>${esc(f.name)}</b>${img.width !== R.w || img.height !== R.h ? `, resized to ${R.w} × ${R.h}` : ''}`, 'ok');
+};
+$('#expPng').onclick = async () => {
+  const c = document.createElement('canvas'); c.width = R.w; c.height = R.h;
+  c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(R.px), R.w, R.h), 0, 0);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  const data = bytesToB64(new Uint8Array(await blob.arrayBuffer()));
+  const p = await askSavePath(R.info.name.replace(/\.gnf$/i,'') + '.png', R.info.dir); if (!p) return;
+  try { await api('/api/export', {dst:p, data}); toast('PNG saved', 'ok'); } catch (e) { toast(esc(e.message), 'err'); }
+};
+$('#saveGnf').onclick = async () => { try { const r = await saveGnfTo(); flashSaved(); toast(`Saved <b>${esc(r.name)}</b>${bakNote(r)}`, 'ok'); } catch (e) { toast('Couldn\'t save: ' + esc(e.message), 'err'); } updateGnfBar(); updateFxBar(); };
+$('#saveAsGnf').onclick = async () => { const p = await askSavePath(R.info.name.replace(/\.gnf$/i,'') + '_edited.gnf', R.info.dir); if (!p) return; try { const r = await saveGnfTo(p); toast(`Saved copy <b>${esc(r.name)}</b>`, 'ok'); } catch (e) { toast('Couldn\'t save: ' + esc(e.message), 'err'); } };
+$('#restoreGnf').onclick = async () => {
+  if (!confirm('Replace this texture with its .bak backup? The backup may contain earlier custom edits; it is not verified stock. Unsaved changes will be discarded.')) return;
+  try { await api('/api/restore', {path:R.info.path}); await loadPath(R.info.path, {quiet:true, noSibling:true}); toast('Backup restored', 'ok'); } catch (e) { toast(esc(e.message), 'err'); }
+};
+
+// ---------- console transfer ----------
+let ftpBusy = false, ftpPlan = null, ftpBackup = '';
+function ftpConfig() { return {host:$('#ftpHost').value.trim(), port:Number($('#ftpPort').value), user:$('#ftpUser').value, password:$('#ftpPassword').value, directory:$('#ftpDirectory').value.trim()}; }
+function clearFTPReview() { ftpPlan=null; $('#ftpReview').hidden=true; }
+function syncFTPControls() {
+  if (!$('#ftpLocal')) return;
+  const ready=!!(M && R && !dirtyAny());
+  if (ftpPlan && (!ready || ftpPlan.mesh!==M.info.path || ftpPlan.ramp!==R.info.path)) clearFTPReview();
+  $('#ftpLocal').textContent=ready ? `Saved pair: ${M.info.name} + ${R.info.name}` : 'Open both assets and save your changes before preparing an upload.';
+  $$('#v-ftp input, #v-ftp button').forEach(b=>b.disabled=ftpBusy);
+  $('#ftpPrepare').disabled=ftpBusy || !ready;
+}
+async function ftpOperation(message, task) {
+  if (ftpBusy) return;
+  ftpBusy=true; syncFTPControls(); $('#ftpStatus').textContent=message;
+  try { await task(); } catch(e) { $('#ftpStatus').textContent=e.message; }
+  finally { ftpBusy=false; syncFTPControls(); }
+}
+$$('#v-ftp input').forEach(i=>i.addEventListener('input',clearFTPReview));
+$('#ftpCheck').onclick=()=>ftpOperation('Connecting and reading both files…',async()=>{
+  clearFTPReview(); const r=await api('/api/ftp/check',{config:ftpConfig()});
+  $('#ftpStatus').textContent=`Connected to ${r.server}\n${r.directory}\n`+r.files.map(f=>`${f.name} · ${f.bytes.toLocaleString()} bytes`).join('\n')+'\nBoth assets are readable and supported.';
+});
+$('#ftpDownload').onclick=()=>{
+  if (dirtyAny() && !confirm('Download and open a new pair? Unsaved editor changes will be discarded.')) return;
+  ftpOperation('Downloading a new local working pair…',async()=>{
+    clearFTPReview(); const r=await api('/api/ftp/download',{config:ftpConfig()});
+    // The user accepted replacing the current pair above; load both without partial-pair prompts.
+    for(const path of r.paths){const f=await api('/api/load',{path});if(f.kind==='fbxd')loadFbxd(f);else loadGnf(f);rememberOpen(f.path);}
+    updateTopBar(); $('#ftpStatus').textContent=`Downloaded to ${r.directory}\nYour console files have not been changed.`;
+    showTab('fx'); toast('Downloaded and opened both console assets','ok');
+  });
+};
+$('#ftpPrepare').onclick=()=>ftpOperation('Reading console files and verifying the local backup…',async()=>{
+  clearFTPReview(); const mesh=M.info.path,ramp=R.info.path;
+  const r=await api('/api/ftp/prepare',{config:ftpConfig(),mesh,ramp});
+  if(dirtyAny() || M.info.path!==mesh || R.info.path!==ramp)throw new Error('The editor files changed during preparation. Save and review again.');
+  ftpPlan={id:r.plan,mesh,ramp}; ftpBackup=r.backup;
+  $('#ftpTarget').textContent=`Replace the following two files on ${r.server} in ${r.directory}:`;
+  $('#ftpFiles').innerHTML=r.files.map(f=>`<li><code>${esc(f.name)}</code> · ${f.bytes.toLocaleString()} bytes</li>`).join('');
+  $('#ftpBackup').textContent=`Verified console backup: ${r.backup}`;
+  $('#ftpReview').hidden=false; $('#ftpStatus').textContent='Backup complete. Review the target and files, then choose Upload this pair.';
+});
+$('#ftpUpload').onclick=()=>{
+  if(!ftpPlan)return;
+  const id=ftpPlan.id;clearFTPReview();
+  ftpOperation('Uploading and downloading each file again to verify its bytes…',async()=>{
+    const r=await api('/api/ftp/upload',{plan:id});
+    $('#ftpStatus').textContent=`Uploaded both files to ${r.server}${r.directory}.\nReadback matches the saved pair.\nBackup: ${r.backup}\nCheck the effect on the console after refreshing its active asset view.`;
+  });
+};
+$('#ftpCancel').onclick=clearFTPReview;
+$('#ftpBackupOpen').onclick=()=>reveal(ftpBackup);
+$('#aboutVersion').textContent='v'+CFG.version;
+$('#aboutBtn').onclick=()=>$('#about').showModal();
+
+// ---------- start ----------
+(async () => {
+  await loadSettings();
+  const P = SETTINGS.prefs || {};
+  if (P.dur > 0) { anim.dur = P.dur; $('#durIn').value = P.dur; }
+  if (P.lightBg) { cam.lightBg = true; $('#bgBtn').classList.add('on'); }
+  $('#linkStrips').onchange = e => { SETTINGS.prefs.linkStrips = e.target.checked; saveSettings(); syncStripUI(); };
+  if (P.sidePane) showPane(P.sidePane);
+  if (P.linkStrips === false) $('#linkStrips').checked = false;
+  // remember which side sections are folded
+  const closed = P.closed || {};
+  $$('details[id]').forEach(dt => {
+    if (dt.id in closed) dt.open = !closed[dt.id];
+    dt.addEventListener('toggle', () => { SETTINGS.prefs.closed = Object.assign(SETTINGS.prefs.closed || {}, {[dt.id]: !dt.open}); saveSettings(); });
+  });
+  if (P.framing === 'whole') { framing = 'whole'; $('#framingSel').value = 'whole'; }
+  $('#framingSel').onchange = e => { framing = e.target.value; SETTINGS.prefs.framing = framing; saveSettings(); if (M) { M.tile = null; if (S.strips.some(st => st.touched)) { S.framing = framing; commit(); } syncStripUI(); draw3d(); } };
+  try {
+    const r = await api('/api/args');
+    const files = r.files || [];
+    if (files.length) for (const f of files) await loadPath(f, {noSibling:true});
+    else showRecent();
+  } catch (e) { toast(esc(e.message), 'err'); }
+  updateTopBar();
+})();
+</script>
+</body>
+</html>

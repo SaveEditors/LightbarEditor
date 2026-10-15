@@ -1,0 +1,28 @@
+BUILD LIGHTBAR EDITOR 1.7.0
+
+Requirements: Go 1.24 or later and network access to download the pinned Go
+modules on the first build. No additional build tools or runtime are required.
+Run these commands in this source directory:
+
+  go mod download
+  go test ./...
+  go vet ./...
+  go build -trimpath -ldflags "-s -w" -o LightbarEditor.exe .
+
+Optional UI behavior checks (Node.js 18 or later):
+  node particle_themes_test.mjs
+
+To cross-compile Windows x64 from another OS:
+  GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o LightbarEditor.exe .
+
+The built executable embeds ui/index.html and ui/fonts/*.woff2. Runtime
+settings and presets use os.UserConfigDir()/LightbarEditor, independently of
+where the executable was built or installed. No console assets are embedded.
+On non-Windows hosts, native file dialogs are replaced by open/save path entry.
+
+Sources: main.go (CLI/local server), fbxd.go (mesh), gnf.go/bc7.go (texture),
+fileio.go (backup/write/restore), dialogs_*.go (platform integration), ui/ (UI).
+ftp_transfer.go implements optional, reviewed two-file FTP transfers.
+Tests generate synthetic containers; no console assets are needed.
+Licensed GPL-3.0-only. See LICENSE and THIRD_PARTY_LICENSES.txt in the repository
+root. Audio and ShellUI background features are not included.

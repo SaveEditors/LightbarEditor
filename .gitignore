@@ -1,0 +1,13 @@
+# Build products and local editor state
+*.exe
+*.zip
+*.fbxd
+*.gnf
+*.at9
+*.elf
+*.bak
+/settings.json
+/presets/
+/downloads/
+/console-backups/
+/dist/

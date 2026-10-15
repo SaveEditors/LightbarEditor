@@ -2,7 +2,7 @@
 
 ## Completed on Apple Silicon
 
-- Built arm64 arm64 host and Go backend targeting macOS 13+.
+- Built Apple Silicon (arm64) host and Go backend targeting macOS 13+.
 - Go tests and vet pass with FTP v0.2.4, matching the upstream third-party notice.
 - Particle regression test passes: 21 theme defaults, custom palette preservation, ramp adjustments, and undo/redo.
 - Windows x64 backend cross-build succeeds after the platform build-tag split.
@@ -11,7 +11,7 @@
 - Applied a preset, saved separate edited FBXD and GNF copies through native Save sheets, and verified both file structures with the backend CLI.
 - Original downloaded reference files retain their original SHA-256 hashes.
 - Captured actual macOS editor, ramp and native Save screenshots using a temporary demo directory without private paths.
-- Universal bundle signature verified; DMG checksum and packaged bundle validated separately.
+- Apple Silicon bundle signature verified; DMG checksum and packaged bundle validated separately.
 
 ## Still pending
 

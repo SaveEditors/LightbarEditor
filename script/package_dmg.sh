@@ -17,7 +17,7 @@ Drag Lightbar Editor.app to Applications.
 Requires macOS 13 or newer; Apple Silicon (arm64) only.
 No PS5 assets are bundled. Open your own shutdown_lightbar.fbxd and shutdown_ramp.gnf files.
 
-This preview is not notarized. A macOS security warning may appear.
+See the release notes for this build’s signing and notarization status.
 Only proceed after checking the source and published SHA-256 checksum.
 Upstream: https://github.com/SaveEditors/LightbarEditor
 TXT

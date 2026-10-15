@@ -2,7 +2,7 @@
 
 **Customize the PS5 shutdown-screen lightbar.** Edit strip colors, particle palettes and ramp textures in a local desktop interface, then transfer your saved assets to the console over FTP.
 
-Author: **SaveEditors** · Windows x64 · **GPL-3.0-only**
+Author: **SaveEditors** · Windows x64 and macOS 13+ · **GPL-3.0-only**
 
 ![Lightbar Editor showing the Matrix preset](docs/media/lightbar-editor-matrix.png)
 
@@ -25,9 +25,13 @@ These recordings show customized shutdown-screen assets during a PS5 restart. Th
 - Optional FTP downloads and reviewed uploads with console backups and byte-for-byte readback verification.
 - Portable executable with embedded interface and fonts. No Python, Node.js or Go installation is needed to run it.
 
+## macOS app
+
+The macOS port provides the same editor in a dedicated window, native Open/Save sheets, Finder reveal, Command shortcuts and a Apple Silicon app bundle. See [macOS installation, screenshots and build instructions](MACOS.md).
+
 ## Requirements
 
-- A Windows x64 PC with a modern web browser.
+- A Windows x64 PC with a modern web browser, or macOS 13+ for the macOS app.
 - Your own supported `shutdown_lightbar.fbxd` and `shutdown_ramp.gnf` files. Console assets are **not distributed** with this project.
 - For FTP: a console setup that already provides an FTP server and the required read/write access, on a trusted local network.
 

@@ -1,0 +1,36 @@
+name: macOS build
+on:
+  pull_request:
+  push:
+    branches: [main, macos-port]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache-dependency-path: source/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test backend and particle themes
+        working-directory: source
+        run: |
+          go test ./...
+          go vet ./...
+          node --test particle_themes_test.mjs
+      - name: Build arm64 macOS app
+        run: ./script/build_and_run.sh --build-only
+      - name: Package DMG
+        run: ./script/package_dmg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LightbarEditor-macOS-arm64
+          path: |
+            dist/*.dmg
+            dist/SHA256SUMS

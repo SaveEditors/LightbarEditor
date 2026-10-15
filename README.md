@@ -8,11 +8,11 @@ Author: **SaveEditors** · Windows x64 · **GPL-3.0-only**
 
 ## Console demonstrations
 
-These recordings show customized shutdown-screen assets during a PS5 restart. Click a preview to open the original MP4. The editor screenshot above shows version 1.6.0; version 1.7.0 adds Console FTP and About.
+These recordings show customized shutdown-screen assets during a PS5 restart. The GIF previews play automatically and loop. Click a preview to open the original MP4. The editor screenshot above shows version 1.6.0; version 1.7.0 adds Console FTP and About.
 
 | Multicolor strips | Segmented strips |
 | --- | --- |
-| [![Multicolor strips during restart](docs/media/shutdown-demo-01.jpg)](docs/media/shutdown-demo-01.mp4) | [![Segmented strips during restart](docs/media/shutdown-demo-02.jpg)](docs/media/shutdown-demo-02.mp4) |
+| [![Multicolor strips during restart](docs/media/shutdown-demo-01.gif)](docs/media/shutdown-demo-01.mp4) | [![Segmented strips during restart](docs/media/shutdown-demo-02.gif)](docs/media/shutdown-demo-02.mp4) |
 | [Watch video · 7 seconds](docs/media/shutdown-demo-01.mp4) | [Watch video · 9 seconds](docs/media/shutdown-demo-02.mp4) |
 
 ## Features

@@ -1800,6 +1800,13 @@ $('#aboutBtn').onclick=()=>$('#about').showModal();
   } catch (e) { toast(esc(e.message), 'err'); }
   updateTopBar();
 })();
+
+// macOS host: retain shared editor behavior, adapt platform-specific labels.
+if (/Mac/.test(navigator.platform)) {
+  document.querySelectorAll('[title]').forEach(el => { el.title = el.title.replace(/Ctrl\+/g, '⌘').replace(/Explorer/g, 'Finder'); });
+  document.querySelectorAll('.kbd').forEach(el => { if (el.textContent === 'Ctrl') el.textContent = '⌘'; });
+}
+
 </script>
 </body>
 </html>

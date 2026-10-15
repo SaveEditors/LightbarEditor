@@ -1,3 +1,9 @@
+# macOS port (unreleased)
+
+- Apple Silicon macOS 13+ app window, native Open/Save sheets, Finder reveal, Command shortcuts, and unsaved-changes quit protection.
+- New macOS icon, DMG packaging, optional Developer ID signing/notarization, and CI build artifacts.
+- Restored readable Go module files with the existing FTP v0.2.4 dependency.
+
 # Changelog
 
 ## 1.7.0 — Initial release

@@ -11,3 +11,6 @@
 /downloads/
 /console-backups/
 /dist/
+
+# Intermediate macOS icon sizes
+/macOS/*.iconset/

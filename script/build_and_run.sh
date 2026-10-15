@@ -9,8 +9,10 @@ APP="$DIST/Lightbar Editor.app"
 pkill -x LightbarEditor 2>/dev/null || true
 pkill -x LightbarBackend 2>/dev/null || true
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$DIST/build"
-(cd source && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 "$GO_BIN" build -trimpath -ldflags '-s -w' -o "$APP/Contents/MacOS/LightbarBackend" .)
-xcrun swiftc macOS/main.swift -O -target arm64-apple-macos13.0 -sdk "$(xcrun --show-sdk-path)" -framework AppKit -framework WebKit -o "$APP/Contents/MacOS/LightbarEditor"
+(cd source && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 "$GO_BIN" build -trimpath -ldflags '-s -w' -o "$DIST/build/LightbarBackend-arm64" .)
+xcrun swiftc macOS/main.swift -O -target arm64-apple-macos13.0 -sdk "$(xcrun --show-sdk-path)" -framework AppKit -framework WebKit -o "$DIST/build/LightbarEditor-arm64"
+install -m 755 "$DIST/build/LightbarBackend-arm64" "$APP/Contents/MacOS/LightbarBackend"
+install -m 755 "$DIST/build/LightbarEditor-arm64" "$APP/Contents/MacOS/LightbarEditor"
 [[ "$(lipo -archs "$APP/Contents/MacOS/LightbarBackend")" == "arm64" ]]
 [[ "$(lipo -archs "$APP/Contents/MacOS/LightbarEditor")" == "arm64" ]]
 cp macOS/Info.plist "$APP/Contents/Info.plist"

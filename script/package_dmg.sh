@@ -5,6 +5,8 @@ DIST="${DIST_DIR:-$ROOT/dist}"
 APP="$DIST/Lightbar Editor.app"
 DMG="$DIST/LightbarEditor-1.7.0-macOS-arm64.dmg"
 if [[ ! -d "$APP" ]]; then "$ROOT/script/build_and_run.sh" --build-only; fi
+[[ "$(lipo -archs "$APP/Contents/MacOS/LightbarBackend")" == "arm64" ]]
+[[ "$(lipo -archs "$APP/Contents/MacOS/LightbarEditor")" == "arm64" ]]
 codesign --verify --deep --strict "$APP"
 STAGE="$(mktemp -d "$DIST/dmg-stage.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
